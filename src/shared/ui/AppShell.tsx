@@ -11,12 +11,12 @@ import {
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
 const NAV: NavItem[] = [
-  { href: "/",           label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/candidates", label: "Candidats",  icon: Users },
-  { href: "/offers",     label: "Offres",     icon: BriefcaseBusiness },
-  { href: "/tests",      label: "Tests",      icon: FlaskConical },
-  { href: "/pool",       label: "Vivier",     icon: Boxes },
-  { href: "/settings",   label: "Paramètres", icon: Settings },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/candidates", label: "Candidats", icon: Users },
+  { href: "/offers", label: "Offres", icon: BriefcaseBusiness },
+  { href: "/tests", label: "Tests", icon: FlaskConical },
+  { href: "/pool", label: "Vivier", icon: Boxes },
+  { href: "/settings", label: "Paramètres", icon: Settings },
 ];
 
 export function AppShell({
@@ -42,13 +42,13 @@ export function AppShell({
     <div className="auth-bg min-h-screen grid grid-cols-[auto_1fr] bg-background text-foreground">
       {/* SIDEBAR */}
       <aside
+        id="app-sidebar"
         className="relative border-r bg-card grid transition-[width] duration-200 ease-out"
         style={{
           width: collapsed ? widthClosed : widthOpen,
           gridTemplateRows: "56px 1fr auto", // header / nav / footer
           overflow: "visible",                // pour la flèche qui déborde
         }}
-        aria-expanded={!collapsed}
       >
         {/* Brand (header de la sidebar) */}
         <div className="flex items-center justify-between px-3 py-3">
@@ -118,6 +118,8 @@ export function AppShell({
           onClick={(e) => { e.stopPropagation(); setCollapsed(v => !v); }}
           className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 bg-card border rounded-full p-1.5 shadow-sm hover:bg-accent transition"
           aria-label={collapsed ? "Ouvrir la barre latérale" : "Fermer la barre latérale"}
+          aria-expanded={!collapsed}
+          aria-controls="app-sidebar"
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4 text-muted-foreground" />

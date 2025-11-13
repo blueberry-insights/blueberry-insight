@@ -1,11 +1,14 @@
-// app/auth/reset/page.tsx
+
 "use client";
 
-import { useState ,useActionState} from "react";
+import { useState, useActionState } from "react";
 import Link from "next/link";
 import { z } from "zod";
 import { resetPasswordAction } from "@/app/(auth)/_actions";
 import { FormSubmit } from "@/shared/ui/FormSubmit";
+
+type ResetState = { ok: boolean; error?: string };
+
 
 const ClientEmailSchema = z
   .string()
@@ -13,7 +16,10 @@ const ClientEmailSchema = z
   .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Email invalide");
 
 export default function ResetPage() {
-  const [state, formAction] = useActionState(resetPasswordAction as any, { ok: false, error: undefined });
+  const [state, formAction] = useActionState<ResetState, FormData>(
+    resetPasswordAction,
+    { ok: false, error: undefined }
+  );
   const [email, setEmail] = useState("");
   const [emailErr, setEmailErr] = useState<string | undefined>(undefined);
 

@@ -17,23 +17,43 @@ export function makeEnsureOrgOnFirstLogin(
     if (!userId) throw new Error("not-authenticated");
 
     // Déjà membre ? on ne fait rien
-    if (await deps.memberships.hasAnyForUser(userId)) return { created: false };
+    if (await deps.memberships.hasAnyForUser(userId)) {
+      return { created: false };
+    }
 
     const safeName = sanitizeOrgName(inputOrgName || "") || "My Organization";
     const base = deps.slugger.slugify(safeName);
     let slug = `${base}-${userId.slice(0, 8)}`;
 
     try {
-      const org = await deps.orgs.create(safeName, slug, userId);     
+      const org = await deps.orgs.create(safeName, slug, userId);
       await deps.memberships.add(userId, org.id, "owner");
       return { created: true, orgId: org.id, slug };
-    } catch (e: any) {
-      const msg = String(e?.message || "");
-      const code = e?.code ?? e?.cause?.code;
-      const isDup = code === "23505" || msg.includes("duplicate key") || msg.includes("slug");
-      if (!isDup) throw e;
+    } catch (err) {
+      // On typpe l'erreur de façon minimaliste
+      const e = err as {
+        message?: string;
+        code?: string;
+        cause?: { code?: string };
+      };
 
-      slug = `${base}-${userId.slice(0, 8)}-${Math.random().toString(36).slice(2, 5)}`;
+      const msg = String(e.message || "");
+      const code = e.code ?? e.cause?.code;
+      const isDup =
+        code === "23505" ||
+        msg.includes("duplicate key") ||
+        msg.includes("slug");
+
+      if (!isDup) {
+        // Si ce n'est pas une collision de slug, on propage l'erreur d'origine
+        throw err;
+      }
+
+      // Collision → on regénère un slug avec suffixe random
+      slug = `${base}-${userId.slice(0, 8)}-${Math.random()
+        .toString(36)
+        .slice(2, 5)}`;
+
       const org = await deps.orgs.create(safeName, slug, userId);
       await deps.memberships.add(userId, org.id, "owner");
       return { created: true, orgId: org.id, slug };

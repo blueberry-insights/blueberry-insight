@@ -13,7 +13,6 @@ export function UserMenu({
   displayName,
   orgName,
   avatarUrl,
-  collapsed,
   size = "md",
   className = "",
 }: Props) {

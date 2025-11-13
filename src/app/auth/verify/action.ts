@@ -13,7 +13,7 @@ export async function resendSignupEmail(formData: FormData) {
       type: "signup",
       email,
     });
-  } catch (err) {
+  }  catch (err: unknown) {
     console.error("Resend signup email error:", err);
   }
 }

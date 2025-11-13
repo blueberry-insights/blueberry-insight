@@ -4,6 +4,9 @@ import { LoginSchema, RegisterSchema, ResetPasswordSchema, UpdatePasswordSchema 
 import { sanitizeRedirect } from "@/shared/utils/sanitizeRedirect";
 import { makeAuthServiceForAction } from "@/infra/supabase/composition";
 
+type ResetState = { ok: boolean; error?: string };
+type UpdateState = { ok: boolean; error?: string };
+
 export async function loginAction(formData: FormData) {
   const auth = await makeAuthServiceForAction();
   const safeRedirect = sanitizeRedirect(formData.get("redirectTo"));
@@ -20,12 +23,19 @@ export async function loginAction(formData: FormData) {
 
   try {
     await auth.signIn(parsed.data.email, parsed.data.password);
-  } catch (e: any) {
-    const m = String(e?.message || "").toLowerCase();
+  } catch (err: unknown) {
+    const m = String(
+      err && typeof err === "object" && "message" in err
+        ? (err as { message?: string }).message
+        : ""
+    ).toLowerCase();
+
     if (m.includes("confirm")) {
       return redirect(`/auth/verify?email=${encodeURIComponent(parsed.data.email)}`);
     }
-    return redirect(`/login?error=${encodeURIComponent("Email ou mot de passe incorrect.")}`);
+    return redirect(
+      `/login?error=${encodeURIComponent("Email ou mot de passe incorrect.")}`
+    );
   }
 
   return redirect(safeRedirect);
@@ -75,37 +85,46 @@ export async function registerAction(formData: FormData) {
   return redirect(`/auth/verify?email=${encodeURIComponent(parsed.data.email)}`);
 }
 
-export async function resetPasswordAction(_prev: any, formData: FormData) {
+export async function resetPasswordAction(
+  _prev: ResetState,
+  formData: FormData
+): Promise<ResetState> {
   const parsed = ResetPasswordSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { ok: false, error: "Email invalide" };
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!.trim();
-  // 👇 on tag explicitement le flux
-  const redirectTo = `${appUrl}/auth/callback?flow=reset`;
+  const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+  if (!rawAppUrl) {
+    console.error("[resetPasswordAction] NEXT_PUBLIC_APP_URL is not set");
+    return { ok: false, error: "Configuration invalide" };
+  }
+  const appUrl = rawAppUrl.trim();
+  const redirectTo = `${appUrl}/auth/reset/confirm`;
 
   const auth = await makeAuthServiceForAction();
-  try { await auth.sendResetEmail(parsed.data.email, redirectTo); } catch {}
+  try {
+    await auth.sendResetEmail(parsed.data.email, redirectTo);
+  } catch {
+  }
   return { ok: true };
 }
 
-export async function updatePasswordAction(_prev: any, formData: FormData) {
-  const payload = {
-    password: String(formData.get("password") ?? ""),
-    confirmPassword: String(formData.get("confirmPassword") ?? ""),
-  };
-  const parsed = UpdatePasswordSchema.safeParse(payload);
-  if (!parsed.success) {
-    const msg = parsed.error.issues[0]?.message ?? "Vérifiez les champs";
-    return { ok: false, error: msg };
-  }
+
+export async function updatePasswordAction(
+  _prev: UpdateState,
+  formData: FormData
+): Promise<UpdateState | never> {
+  const parsed = UpdatePasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) return { ok: false, error: "Vérifiez les champs" };
 
   const auth = await makeAuthServiceForAction();
   try {
     await auth.updatePassword(parsed.data.password);
-  } catch (e: any) {
-    console.error("updatePasswordAction error:", e); // 👈 utile
-    const msg = e?.message || e?.error_description || "Impossible de mettre à jour le mot de passe";
-    return { ok: false, error: msg };
+  } catch {
+    return { ok: false, error: "Impossible de mettre à jour le mot de passe" };
   }
+
   return redirect("/login?reset=success");
 }

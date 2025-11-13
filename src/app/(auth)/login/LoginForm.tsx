@@ -20,7 +20,6 @@ type LoginFormProps = {
 export default function LoginForm({ redirectTo, serverError, resetSuccess }: LoginFormProps) {
   const [values, setValues] = useState({ email: "", password: "" });
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [pending, setPending] = useState(false);
 
   function set<K extends keyof typeof values>(k: K, v: (typeof values)[K]) {
     setValues((s) => ({ ...s, [k]: v }));
@@ -39,7 +38,6 @@ export default function LoginForm({ redirectTo, serverError, resetSuccess }: Log
       setFieldErrors(errs);
       return;
     }
-    setPending(true);
   }
 
   return (

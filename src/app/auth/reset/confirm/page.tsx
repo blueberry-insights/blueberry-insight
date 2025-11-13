@@ -7,6 +7,8 @@ import { updatePasswordAction } from "@/app/(auth)/_actions";
 import { FormSubmit } from "@/shared/ui/FormSubmit";
 import { getPasswordStrength } from "@/shared/utils/passwordStrength";
 
+type UpdateState = { ok: boolean; error?: string };
+
 const UpdateClientSchema = z
   .object({
     password: z.string().min(8, "Au moins 8 caractères"),
@@ -18,8 +20,10 @@ const UpdateClientSchema = z
   });
 
 export default function ResetConfirmPage() {
-  const [state, formAction] = useActionState(updatePasswordAction as any, { ok: false, error: undefined });
-
+ const [state, formAction] = useActionState<UpdateState, FormData>(
+  updatePasswordAction,
+  { ok: false, error: undefined }
+);
   const [values, setValues] = useState({ password: "", confirmPassword: "" });
   const [fieldErrors, setFieldErrors] = useState<Partial<typeof values>>({});
 
@@ -65,7 +69,6 @@ export default function ResetConfirmPage() {
             value={values.password}
             onChange={(e) => set("password", e.target.value)}
           />
-          {/* Jauge robustesse */}
           <div className="flex gap-1">
             {Array.from({ length: 4 }).map((_, i) => (
               <div

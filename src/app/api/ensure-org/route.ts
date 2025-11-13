@@ -6,10 +6,24 @@ import { makeMembershipRepo } from "@/infra/supabase/adapters/membership.repo.su
 import { DefaultSlugger } from "@/infra/supabase/utils/slugger";
 import { makeSessionReaderAction } from "@/infra/supabase/adapters/session.reader.supabase";
 
+// Typage minimal du user_metadata pour éviter les any plus tard
+type UserMetadata = {
+  org_name?: string;
+  [key: string]: unknown;
+};
+
 export async function POST() {
   const sb = await supabaseServerAction();
-  const { data: { user } } = await sb.auth.getUser();
-  if (!user) return NextResponse.json({ ok: false, reason: "not-authenticated" }, { status: 401 });
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json(
+      { ok: false, reason: "not-authenticated" },
+      { status: 401 }
+    );
+  }
 
   const ensureOrg = makeEnsureOrgOnFirstLogin({
     auth: makeSessionReaderAction(),
@@ -18,14 +32,19 @@ export async function POST() {
     slugger: DefaultSlugger,
   });
 
-  const candidateName = String((user.user_metadata as any)?.org_name || "");
+  const meta = (user.user_metadata ?? {}) as UserMetadata;
+  const candidateName = String(meta.org_name || "");
+
   try {
     const result = await ensureOrg(candidateName);
     return NextResponse.json({ ok: true, ...result });
-  } catch (e: any) {
-    const code = e?.code ?? e?.cause?.code ?? null;
-    const msg = e?.message || "unknown-error";
+  } catch (err) {
+    const e = err as { code?: string; cause?: { code?: string }; message?: string };
+
+    const code = e.code ?? e.cause?.code ?? null;
+    const msg = e.message || "unknown-error";
     const status = msg === "not-authenticated" ? 401 : code === "23505" ? 409 : 400;
+
     return NextResponse.json({ ok: false, code, reason: msg }, { status });
   }
 }

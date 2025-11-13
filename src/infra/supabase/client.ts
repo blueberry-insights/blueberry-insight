@@ -11,7 +11,7 @@ export async function supabaseServerRSC() {
   return createServerClient(url, key, {
     cookies: {
       getAll: () => jar.getAll(),
-      setAll: (_cookiesToSet) => {},
+      setAll: () => {},
     },
   });
 }

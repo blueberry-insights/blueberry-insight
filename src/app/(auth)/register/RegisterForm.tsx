@@ -34,7 +34,6 @@ export default function RegisterForm({ serverError }: RegisterFormProps) {
   });
   const [fieldErrors, setFieldErrors] =
     useState<Partial<Record<keyof typeof values, string>>>({});
-  const [pending, setPending] = useState(false);
 
   function set<K extends keyof typeof values>(k: K, v: (typeof values)[K]) {
     setValues((s) => ({ ...s, [k]: v }));
@@ -53,7 +52,6 @@ export default function RegisterForm({ serverError }: RegisterFormProps) {
       setFieldErrors(errs);
       return;
     }
-    setPending(true);
   }
 
   const { score, label, color } = getPasswordStrength(values.password);
