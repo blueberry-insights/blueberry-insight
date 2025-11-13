@@ -1,55 +1,31 @@
 import { NextResponse } from "next/server";
+import { supabaseServerAction } from "@/infra/supabase/client";
 import { makeEnsureOrgOnFirstLogin } from "@/core/usecases/ensureOrgOnFirstLogin";
-import { SupabaseOrgRepo } from "@/infra/supabase/SupabaseOrgRepo";
-import { SupabaseMembershipRepo } from "@/infra/supabase/SupabaseMembershipRepo";
-import { DefaultSlugger } from "@/infra/supabase/slugger";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import type { AuthService } from "@/core/ports/AuthService";
+import { makeOrgRepo } from "@/infra/supabase/adapters/org.repo.supabase";
+import { makeMembershipRepo } from "@/infra/supabase/adapters/membership.repo.supabase";
+import { DefaultSlugger } from "@/infra/supabase/utils/slugger";
+import { makeSessionReaderAction } from "@/infra/supabase/adapters/session.reader.supabase";
 
-const ServerAuthService: AuthService = {
-  async currentUserId(): Promise<string | null> {
-    const store = await (cookies() as any);
-    const sb = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => store.getAll(),
-          setAll: () => {},
-        },
-      }
-    );
-    const { data: { user } } = await sb.auth.getUser();
-    return user?.id ?? null;
-  },
-  async signIn() {
-    throw new Error("not-implemented-here");
-  },
-  async signUp() {
-    throw new Error("not-implemented-here");
-  },
-  async signOut() {
-    // no-op ici, ce handler n’a pas besoin de signOut
-  },
-};
-
-export async function POST(req: Request) {
-  const { orgName } = (await req.json().catch(() => ({}))) as { orgName?: string };
+export async function POST() {
+  const sb = await supabaseServerAction();
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) return NextResponse.json({ ok: false, reason: "not-authenticated" }, { status: 401 });
 
   const ensureOrg = makeEnsureOrgOnFirstLogin({
-    auth: ServerAuthService,
-    orgs: SupabaseOrgRepo,
-    memberships: SupabaseMembershipRepo,
+    auth: makeSessionReaderAction(),
+    orgs: makeOrgRepo(sb),
+    memberships: makeMembershipRepo(sb),
     slugger: DefaultSlugger,
   });
 
+  const candidateName = String((user.user_metadata as any)?.org_name || "");
   try {
-    const result = await ensureOrg(orgName);
+    const result = await ensureOrg(candidateName);
     return NextResponse.json({ ok: true, ...result });
   } catch (e: any) {
-    const message = e?.message || "unknown-error";
-    const status = message === "not-authenticated" ? 401 : 400;
-    return NextResponse.json({ ok: false, reason: message }, { status });
+    const code = e?.code ?? e?.cause?.code ?? null;
+    const msg = e?.message || "unknown-error";
+    const status = msg === "not-authenticated" ? 401 : code === "23505" ? 409 : 400;
+    return NextResponse.json({ ok: false, code, reason: msg }, { status });
   }
 }

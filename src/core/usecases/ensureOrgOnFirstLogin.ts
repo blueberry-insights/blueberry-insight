@@ -1,7 +1,7 @@
-import { AuthService } from "../ports/AuthService";
-import { OrgRepo } from "../ports/OrgRepo";
-import { MembershipRepo } from "../ports/MembershipRepo";
-import { Slugger } from "../ports/Slugger";
+import type { SessionReader } from "../ports/SeesionReader";
+import type { OrgRepo } from "../ports/OrgRepo";
+import type { MembershipRepo } from "../ports/MembershipRepo";
+import type { Slugger } from "../ports/Slugger";
 
 function sanitizeOrgName(name: string) {
   const n = (name || "").trim();
@@ -10,22 +10,33 @@ function sanitizeOrgName(name: string) {
 }
 
 export function makeEnsureOrgOnFirstLogin(
-  deps: { auth: AuthService; orgs: OrgRepo; memberships: MembershipRepo; slugger: Slugger }
+  deps: { auth: SessionReader; orgs: OrgRepo; memberships: MembershipRepo; slugger: Slugger }
 ) {
   return async function ensureOrgOnFirstLogin(inputOrgName?: string) {
     const userId = await deps.auth.currentUserId();
     if (!userId) throw new Error("not-authenticated");
 
+    // Déjà membre ? on ne fait rien
     if (await deps.memberships.hasAnyForUser(userId)) return { created: false };
 
     const safeName = sanitizeOrgName(inputOrgName || "") || "My Organization";
     const base = deps.slugger.slugify(safeName);
-    const slug = await deps.slugger.uniquify(base, async (s) => !!(await deps.orgs.findBySlug(s)));
+    let slug = `${base}-${userId.slice(0, 8)}`;
 
+    try {
+      const org = await deps.orgs.create(safeName, slug, userId);     
+      await deps.memberships.add(userId, org.id, "owner");
+      return { created: true, orgId: org.id, slug };
+    } catch (e: any) {
+      const msg = String(e?.message || "");
+      const code = e?.code ?? e?.cause?.code;
+      const isDup = code === "23505" || msg.includes("duplicate key") || msg.includes("slug");
+      if (!isDup) throw e;
 
-    const org = await deps.orgs.create(safeName, slug, userId);
-    await deps.memberships.add(userId, org.id, "owner");
-
-    return { created: true, orgId: org.id, slug };
+      slug = `${base}-${userId.slice(0, 8)}-${Math.random().toString(36).slice(2, 5)}`;
+      const org = await deps.orgs.create(safeName, slug, userId);
+      await deps.memberships.add(userId, org.id, "owner");
+      return { created: true, orgId: org.id, slug };
+    }
   };
 }

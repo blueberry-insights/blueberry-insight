@@ -1,64 +1,57 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { services } from "@/app/container";
-import { useState } from "react";
-
 type Props = {
   displayName: string;
   orgName?: string;
   avatarUrl?: string | null;
+  collapsed?: boolean;
+  size?: "sm" | "md";      // 👈 header vs sidebar
+  className?: string;
 };
 
-export function UserMenu({ displayName, orgName, avatarUrl }: Props) {
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+export function UserMenu({
+  displayName,
+  orgName,
+  avatarUrl,
+  collapsed,
+  size = "md",
+  className = "",
+}: Props) {
+  const initials =
+    displayName?.split(" ").map(n => n[0]?.toUpperCase()).join("").slice(0, 2) || "?";
 
-  async function handleLogout() {
-    setLoading(true);
-    await services.signOut();
-    router.replace("/login");
-    router.refresh();
-  }
-
-  const initials = displayName
-    ? displayName
-        .split(" ")
-        .map((n) => n[0]?.toUpperCase())
-        .join("")
-        .slice(0, 2)
-    : "?";
+  const isSm = size === "sm";
+  const avatarSize = isSm ? 32 : 64;
+  const nameSize = isSm ? "text-sm" : "text-base";
+  const orgSize = isSm ? "text-[11px]" : "text-xs";
+  const spacing = isSm ? "gap-2" : "gap-3";
 
   return (
-    <div className="flex h-full flex-col items-center justify-between py-4">
-      {/* TOP : Avatar + infos */}
-      <div className="flex flex-col items-center gap-2">
-        <div className="h-16 w-16 overflow-hidden rounded-full border border-border bg-muted flex items-center justify-center text-lg font-semibold text-primary">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt="avatar"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            initials
-          )}
-        </div>
-        <div className="text-sm font-medium">{displayName}</div>
-        {orgName && (
-          <div className="text-xs text-muted-foreground">{orgName}</div>
+    <div className={`flex items-center ${spacing} ${className}`}>
+      {/* Avatar */}
+      <div
+        className="overflow-hidden rounded-full border border-border bg-muted grid place-items-center text-primary font-semibold shrink-0"
+        style={{ width: avatarSize, height: avatarSize, fontSize: isSm ? 12 : 16 }}
+      >
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+        ) : (
+          initials
         )}
       </div>
 
-      {/* BOTTOM : Logout */}
-      <button
-        onClick={handleLogout}
-        disabled={loading}
-        className="w-full mt-auto rounded-md border border-border px-3 py-1 text-sm text-muted-foreground hover:bg-muted disabled:opacity-50"
-      >
-        {loading ? "Déconnexion..." : "Se déconnecter"}
-      </button>
+      {/* Infos texte */}
+      <div className="flex flex-col leading-tight min-w-0">
+        <div className={`${nameSize} font-medium truncate max-w-[140px]`}>
+          {displayName}
+        </div>
+        {orgName && (
+          <div className={`${orgSize} text-muted-foreground truncate max-w-[140px]`}>
+            {orgName}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
