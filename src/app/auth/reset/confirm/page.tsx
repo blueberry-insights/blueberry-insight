@@ -1,31 +1,45 @@
-// app/auth/reset/confirm/page.tsx  — CLIENT COMPONENT, même design que login
+// src/app/auth/reset/confirm/page.tsx
 "use client";
+
 import { useState, useActionState } from "react";
 import Link from "next/link";
 import { z } from "zod";
+import { motion } from "framer-motion";
+
+import { useAuthMotionProps } from "@/shared/hooks/useAuthMotion";
 import { updatePasswordAction } from "@/app/(auth)/_actions";
 import { FormSubmit } from "@/shared/ui/FormSubmit";
-import { getPasswordStrength } from "@/shared/utils/passwordStrength";
+import { GenericForm } from "@/shared/ui/GenericForm";
+import { TextField } from "@/shared/ui/fields/TextField";
 
 type UpdateState = { ok: boolean; error?: string };
 
-const UpdateClientSchema = z
+const ClientUpdateSchema = z
   .object({
     password: z.string().min(8, "Au moins 8 caractères"),
-    confirmPassword: z.string().min(1, "Confirmation requise"),
+    confirmPassword: z.string(),
   })
   .refine((d) => d.password === d.confirmPassword, {
-    path: ["confirmPassword"],
     message: "Les mots de passe ne correspondent pas",
+    path: ["confirmPassword"],
   });
 
 export default function ResetConfirmPage() {
- const [state, formAction] = useActionState<UpdateState, FormData>(
-  updatePasswordAction,
-  { ok: false, error: undefined }
-);
-  const [values, setValues] = useState({ password: "", confirmPassword: "" });
-  const [fieldErrors, setFieldErrors] = useState<Partial<typeof values>>({});
+  const [state, formAction] = useActionState<UpdateState, FormData>(
+    updatePasswordAction,
+    { ok: false, error: undefined }
+  );
+
+  const [values, setValues] = useState({
+    password: "",
+    confirmPassword: "",
+  });
+  const [fieldErrors, setFieldErrors] = useState<{
+    password?: string;
+    confirmPassword?: string;
+  }>({});
+
+  const motionProps = useAuthMotionProps();
 
   function set<K extends keyof typeof values>(k: K, v: (typeof values)[K]) {
     setValues((s) => ({ ...s, [k]: v }));
@@ -33,80 +47,70 @@ export default function ResetConfirmPage() {
   }
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    const parsed = UpdateClientSchema.safeParse(values);
+    const parsed = ClientUpdateSchema.safeParse(values);
     if (!parsed.success) {
       e.preventDefault();
-      const errs: Partial<typeof values> = {};
+      const errs: typeof fieldErrors = {};
       for (const issue of parsed.error.issues) {
         const k = issue.path[0] as keyof typeof values;
         errs[k] ??= issue.message;
       }
       setFieldErrors(errs);
+      return;
     }
   }
 
-  const { score, label, color } = getPasswordStrength(values.password);
-  const fillCount = Math.min(4, Math.max(1, score + 1));
-
   return (
-    <div className="auth-bg grid place-items-center bg-background text-foreground">
-      <h1 className="text-xl mb-4 font-semibold">Blueberry Insight</h1>
+    <div className="auth-bg grid min-h-screen place-items-center bg-background text-foreground px-4">
+      <motion.div {...motionProps} className="w-full max-w-md space-y-4">
+        <h1 className="text-xl font-semibold text-center">Blueberry Insight</h1>
 
-      <form
-        action={formAction}
-        onSubmit={onSubmit}
-        className="w-full max-w-md rounded-2xl border border-white/30 bg-[rgba(255,255,255,0.4)] backdrop-blur p-8 space-y-4"
-      >
-        <h2 className="text-lg font-semibold">Définir un nouveau mot de passe</h2>
+        <GenericForm action={formAction} onSubmit={onSubmit}>
+          <h2 className="text-base font-semibold">
+            Définir un nouveau mot de passe
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Choisis un nouveau mot de passe pour ton compte.
+          </p>
 
-        <div className="space-y-1">
-          <input
+          <TextField
             name="password"
             type="password"
-            placeholder="Nouveau mot de passe"
-            className="w-full rounded-lg border p-2"
+            label="Nouveau mot de passe"
+            placeholder="••••••••"
             autoComplete="new-password"
             value={values.password}
-            onChange={(e) => set("password", e.target.value)}
+            onChange={(v) => set("password", v)}
+            error={fieldErrors.password}
           />
-          <div className="flex gap-1">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className={[
-                  "h-1 flex-1 rounded transition-colors",
-                  i < fillCount ? color : "bg-gray-300/70",
-                ].join(" ")}
-              />
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">Robustesse : {label}</p>
-        </div>
-        {fieldErrors.password && <p className="text-sm text-red-600">{fieldErrors.password}</p>}
 
-        <input
-          name="confirmPassword"
-          type="password"
-          placeholder="Confirmer le mot de passe"
-          className="w-full rounded-lg border p-2"
-          autoComplete="new-password"
-          value={values.confirmPassword}
-          onChange={(e) => set("confirmPassword", e.target.value)}
-        />
-        {fieldErrors.confirmPassword && (
-          <p className="text-sm text-red-600">{fieldErrors.confirmPassword}</p>
-        )}
+          <TextField
+            name="confirmPassword"
+            type="password"
+            label="Confirmer le mot de passe"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            value={values.confirmPassword}
+            onChange={(v) => set("confirmPassword", v)}
+            error={fieldErrors.confirmPassword}
+          />
 
-        {state?.error && <p className="text-sm text-red-600">{state.error}</p>}
+          {state?.error && (
+            <p className="text-sm text-red-600">{state.error}</p>
+          )}
 
-        <FormSubmit>Mettre à jour</FormSubmit>
+          <FormSubmit>Mettre à jour le mot de passe</FormSubmit>
 
-        <p className="text-center text-sm text-muted-foreground">
-          <Link href="/login" className="font-medium text-primary hover:underline">
-            Retour à la connexion
-          </Link>
-        </p>
-      </form>
+          <p className="text-center text-sm text-muted-foreground">
+            <Link
+              href="/login"
+              className="font-medium text-primary hover:underline"
+            >
+              Retour à la connexion
+            </Link>
+          </p>
+        </GenericForm>
+      </motion.div>
     </div>
   );
 }

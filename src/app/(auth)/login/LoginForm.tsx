@@ -1,10 +1,18 @@
+
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { z } from "zod";
+import { motion } from "framer-motion";
+
 import { loginAction } from "../_actions";
+
+import { useAuthMotionProps } from "@/shared/hooks/useAuthMotion";
+
 import { FormSubmit } from "@/shared/ui/FormSubmit";
+import { GenericForm } from "@/shared/ui/GenericForm";
+import { TextField } from "@/shared/ui/fields/TextField";
 
 const LoginClientSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -20,6 +28,8 @@ type LoginFormProps = {
 export default function LoginForm({ redirectTo, serverError, resetSuccess }: LoginFormProps) {
   const [values, setValues] = useState({ email: "", password: "" });
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+
+  const motionProps = useAuthMotionProps()
 
   function set<K extends keyof typeof values>(k: K, v: (typeof values)[K]) {
     setValues((s) => ({ ...s, [k]: v }));
@@ -39,67 +49,63 @@ export default function LoginForm({ redirectTo, serverError, resetSuccess }: Log
       return;
     }
   }
-
+  
   return (
-    <div className="auth-bg grid place-items-center bg-background text-foreground">
-      <h1 className="text-xl mb-4 font-semibold">Blueberry Insight</h1>
-      <form
-        action={loginAction}
-        onSubmit={onSubmit}
-        className="w-full max-w-md rounded-2xl border border-white/30 bg-[rgba(255,255,255,0.4)] backdrop-blur p-8 space-y-4"
-      >
-        <input type="hidden" name="redirectTo" value={redirectTo} />
+    <>
+      <motion.div {...motionProps} className="w-full max-w-md space-y-4">
+        <h1 className="text-xl font-semibold text-center text-foreground">Blueberry Insight</h1>
 
-        <h2 className="text-lg font-semibold">Connexion</h2>
+        <GenericForm action={loginAction} onSubmit={onSubmit}>
+          <input type="hidden" name="redirectTo" value={redirectTo} />
 
-        {resetSuccess && (
-          <p className="text-sm text-green-600">
-            Mot de passe mis à jour. Tu peux te reconnecter.
+          <h2 className="text-lg font-semibold text-foreground">Connexion</h2>
+
+          {resetSuccess && (
+            <p className="text-sm text-green-600">
+              Mot de passe mis à jour. Tu peux te reconnecter.
+            </p>
+          )}
+
+          {serverError && <p className="text-sm text-red-600">{serverError}</p>}
+
+          <TextField
+            name="email"
+            type="email"
+            label="Email"
+            placeholder="ton.email@exemple.com"
+            autoComplete="username"
+            value={values.email}
+            onChange={(v) => set("email", v)}
+            error={fieldErrors.email}
+          />
+
+          <TextField
+            name="password"
+            type="password"
+            label="Mot de passe"
+            placeholder="••••••••"
+            autoComplete="current-password"
+            value={values.password}
+            onChange={(v) => set("password", v)}
+            error={fieldErrors.password}
+            withPasswordToggle
+          />
+
+          <div className="flex items-center justify-between">
+            <span />
+            <Link href="/auth/reset" className="text-xs text-primary hover:opacity-90">
+              Mot de passe oublié ?
+            </Link>
+          </div>
+          <FormSubmit>Se connecter</FormSubmit>
+          <p className="text-center text-sm text-muted-foreground">
+            Don’t have an account?{" "}
+            <Link href="/register" className="font-medium text-primary hover:underline">
+              Sign up
+            </Link>
           </p>
-        )}
-
-        {serverError && <p className="text-sm text-red-600">{serverError}</p>}
-
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          className="w-full rounded-lg border p-2"
-          value={values.email}
-          autoComplete="username"
-          onChange={(e) => set("email", e.target.value)}
-        />
-        {fieldErrors.email && <p className="text-sm text-red-600">{fieldErrors.email}</p>}
-
-        <input
-          name="password"
-          type="password"
-          placeholder="Mot de passe"
-          className="w-full rounded-lg border p-2"
-          value={values.password}
-          autoComplete="current-password"
-          onChange={(e) => set("password", e.target.value)}
-        />
-        {fieldErrors.password && (
-          <p className="text-sm text-red-600">{fieldErrors.password}</p>
-        )}
-
-        <FormSubmit>Se connecter</FormSubmit>
-
-        <div className="flex items-center justify-between">
-          <span />
-          <Link href="/auth/reset" className="text-sm text-primary hover:opacity-90">
-            Mot de passe oublié ?
-          </Link>
-        </div>
-
-        <p className="text-center text-sm text-muted-foreground">
-          Don’t have an account?{" "}
-          <Link href="/register" className="font-medium text-primary hover:underline">
-            Sign up
-          </Link>
-        </p>
-      </form>
-    </div>
+        </GenericForm>
+      </motion.div>
+    </>
   );
 }

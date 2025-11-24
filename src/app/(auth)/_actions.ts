@@ -1,8 +1,17 @@
 "use server";
 import { redirect } from "next/navigation";
-import { LoginSchema, RegisterSchema, ResetPasswordSchema, UpdatePasswordSchema } from "@/shared/validation/auth";
+import {
+  LoginSchema,
+  RegisterSchema,
+  ResetPasswordSchema,
+  UpdatePasswordSchema,
+} from "@/shared/validation/auth";
 import { sanitizeRedirect } from "@/shared/utils/sanitizeRedirect";
 import { makeAuthServiceForAction } from "@/infra/supabase/composition";
+import { makeLoginUser } from "@/core/usecases/loginUser";
+import { makeRegisterUser } from "@/core/usecases/registerUser";
+import { makeSendPasswordResetEmail } from "@/core/usecases/sendPasswordResetEmail";
+import { makeUpdatePassword } from "@/core/usecases/updatePassword";
 
 type ResetState = { ok: boolean; error?: string };
 type UpdateState = { ok: boolean; error?: string };
@@ -21,18 +30,16 @@ export async function loginAction(formData: FormData) {
     return redirect(`/login?error=${encodeURIComponent(msg)}`);
   }
 
-  try {
-    await auth.signIn(parsed.data.email, parsed.data.password);
-  } catch (err: unknown) {
-    const m = String(
-      err && typeof err === "object" && "message" in err
-        ? (err as { message?: string }).message
-        : ""
-    ).toLowerCase();
+  const loginUser = makeLoginUser(auth);
+  const result = await loginUser(parsed.data);
 
-    if (m.includes("confirm")) {
-      return redirect(`/auth/verify?email=${encodeURIComponent(parsed.data.email)}`);
+  if (!result.ok) {
+    if (result.reason === "email-not-confirmed") {
+      return redirect(
+        `/auth/verify?email=${encodeURIComponent(parsed.data.email)}`
+      );
     }
+
     return redirect(
       `/login?error=${encodeURIComponent("Email ou mot de passe incorrect.")}`
     );
@@ -67,18 +74,22 @@ export async function registerAction(formData: FormData) {
   const emailRedirectTo =
     appUrl && appUrl.startsWith("http") ? `${appUrl}/auth/callback` : undefined;
 
-  try {
-    await auth.signUp(
-      parsed.data.email,
-      parsed.data.password,
-      { full_name: parsed.data.fullName, org_name: parsed.data.orgName },
-      emailRedirectTo
-    );
-  } catch {
+  const registerUser = makeRegisterUser(auth);
+  const result = await registerUser({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    fullName: parsed.data.fullName,
+    orgName: parsed.data.orgName,
+    emailRedirectTo,
+  });
+
+  if (!result.ok) {
     const generic =
-      process.env.NODE_ENV === "production"
-        ? "Inscription en cours. Vérifie ton email."
-        : "Un compte existe peut-être déjà avec cet email.";
+      result.reason === "email-in-use" && process.env.NODE_ENV !== "production"
+        ? "Un compte existe peut-être déjà avec cet email."
+        : process.env.NODE_ENV === "production"
+          ? "Inscription en cours. Vérifie ton email."
+          : "Impossible de créer le compte.";
     return redirect(`/register?error=${encodeURIComponent(generic)}`);
   }
 
@@ -97,16 +108,23 @@ export async function resetPasswordAction(
     console.error("[resetPasswordAction] NEXT_PUBLIC_APP_URL is not set");
     return { ok: false, error: "Configuration invalide" };
   }
-  const appUrl = rawAppUrl.trim();
-  const redirectTo = `${appUrl}/auth/reset/confirm`;
+
+  const redirectTo = `${rawAppUrl.trim()}/auth/callback?flow=reset`;
 
   const auth = await makeAuthServiceForAction();
-  try {
-    await auth.sendResetEmail(parsed.data.email, redirectTo);
-  } catch {
+  const sendResetEmail = makeSendPasswordResetEmail(auth);
+  const result = await sendResetEmail({
+    email: parsed.data.email,
+    redirectTo,
+  });
+
+  if (!result.ok && result.error) {
+    console.error("[resetPasswordAction] sendResetEmail error:", result.error);
   }
+
   return { ok: true };
 }
+
 
 
 export async function updatePasswordAction(
@@ -120,9 +138,10 @@ export async function updatePasswordAction(
   if (!parsed.success) return { ok: false, error: "Vérifiez les champs" };
 
   const auth = await makeAuthServiceForAction();
-  try {
-    await auth.updatePassword(parsed.data.password);
-  } catch {
+  const updatePassword = makeUpdatePassword(auth);
+  const result = await updatePassword({ password: parsed.data.password });
+
+  if (!result.ok) {
     return { ok: false, error: "Impossible de mettre à jour le mot de passe" };
   }
 

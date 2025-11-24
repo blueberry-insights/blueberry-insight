@@ -16,7 +16,7 @@ export function FormSubmit({ children }: FormSubmitProps) {
     <button
       type="submit"
       disabled={pending}
-      className={`relative w-full rounded-lg bg-[#8B97FF] text-white py-2 font-medium transition-all
+      className={`relative w-full rounded-lg bg-[#8B97FF] text-sm text-white py-2 font-medium transition-all
         ${pending ? "opacity-70 cursor-wait" : "hover:opacity-90"}`}
     >
       {pending ? (

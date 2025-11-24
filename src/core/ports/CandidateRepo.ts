@@ -1,22 +1,24 @@
-export type CandidateId = string;
+import type {
+  CandidateListItem,
+  CandidateStatus,
+} from "@/core/models/Candidate";
 
 export type CreateCandidateInput = {
   orgId: string;
   fullName: string;
-  email: string;
-  skills?: string[];
-  offerId?: string | null;
-  cvUrl?: string | null;
-  createdBy: string;
-};
-
-export type CandidateListItem = {
-  id: CandidateId;
-  fullName: string;
-  createdAt: string;
+  email?: string | null;
+  status?: CandidateStatus;
+  source?: string | null;
+  tags?: string[];
+  note?: string | null;
 };
 
 export interface CandidateRepo {
-  insertCandidate(input: CreateCandidateInput): Promise<{ id: CandidateId }>;
   listByOrg(orgId: string): Promise<CandidateListItem[]>;
+  create(input: CreateCandidateInput): Promise<CandidateListItem>;
+  updateNote(input: {
+    orgId: string;
+    candidateId: string;
+    note: string | null;
+  }): Promise<CandidateListItem>;
 }

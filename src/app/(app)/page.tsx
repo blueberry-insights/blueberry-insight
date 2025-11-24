@@ -1,10 +1,9 @@
 import "server-only";
 import { redirect } from "next/navigation";
-import { supabaseServerRSC } from "@/infra/supabase/client"; 
+import { getSessionUser } from "@/infra/supabase/session";
 
 export default async function Home() {
-  const sb = await supabaseServerRSC(); 
-  const { data: { user } } = await sb.auth.getUser();
+  const user = await getSessionUser();
 
   if (!user) {
     redirect("/login?redirectedFrom=%2F");

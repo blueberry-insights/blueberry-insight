@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import type { Database } from "./types/Database";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const key =
@@ -8,7 +9,7 @@ const key =
 
 export async function supabaseServerRSC() {
   const jar = await cookies(); 
-  return createServerClient(url, key, {
+  return createServerClient<Database>(url, key, {
     cookies: {
       getAll: () => jar.getAll(),
       setAll: () => {},
@@ -19,7 +20,7 @@ export async function supabaseServerRSC() {
 
 export async function supabaseServerAction() {
   const jar = await cookies(); 
-  return createServerClient(url, key, {
+  return createServerClient<Database>(url, key, {
     cookies: {
       getAll: () => jar.getAll(),
       setAll: (cookiesToSet) => {

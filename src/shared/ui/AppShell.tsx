@@ -24,7 +24,7 @@ export function AppShell({
   headerRightSlot,            // 👈 ex: <UserMenu .../>
   sidebarFooterSlot,          // ex: <ButtonLogout/>
   defaultCollapsed = false,
-  autoCollapseOnNavigate = false, // ne rétracte pas à la nav (tu peux le remettre à true si tu veux)
+  autoCollapseOnNavigate = false, 
 }: {
   children: React.ReactNode;
   headerRightSlot?: React.ReactNode;
@@ -38,19 +38,25 @@ export function AppShell({
   const widthClosed = 64;
   const navItems = useMemo(() => NAV, []);
 
+  // Trouve le nom de la page courante
+  const currentPageName = useMemo(() => {
+    const item = navItems.find(
+      (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+    );
+    return item?.label ?? "";
+  }, [pathname, navItems]);
+
   return (
     <div className="auth-bg min-h-screen grid grid-cols-[auto_1fr] bg-background text-foreground">
-      {/* SIDEBAR */}
       <aside
         id="app-sidebar"
         className="relative border-r bg-card grid transition-[width] duration-200 ease-out"
         style={{
           width: collapsed ? widthClosed : widthOpen,
-          gridTemplateRows: "56px 1fr auto", // header / nav / footer
-          overflow: "visible",                // pour la flèche qui déborde
+          gridTemplateRows: "56px 1fr auto", 
+          overflow: "visible",             
         }}
       >
-        {/* Brand (header de la sidebar) */}
         <div className="flex items-center justify-between px-3 py-3">
           <Link href="/" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-lg bg-primary/20 grid place-items-center">
@@ -69,7 +75,6 @@ export function AppShell({
           </Link>
         </div>
 
-        {/* NAVIGATION */}
         <nav className="px-2">
           <ul className="space-y-1">
             {navItems.map(({ href, label, icon: Icon }) => {
@@ -105,15 +110,12 @@ export function AppShell({
             })}
           </ul>
         </nav>
-
-        {/* FOOTER de la sidebar (ex: logout) */}
         <div className="px-3 py-3">
           <div className="transition-all duration-200">
             {sidebarFooterSlot}
           </div>
         </div>
 
-        {/* TOGGLE flottant qui déborde */}
         <button
           onClick={(e) => { e.stopPropagation(); setCollapsed(v => !v); }}
           className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 bg-card border rounded-full p-1.5 shadow-sm hover:bg-accent transition"
@@ -132,8 +134,8 @@ export function AppShell({
       {/* MAIN */}
       <main className="flex min-h-screen flex-col">
         <header className="flex h-14 items-center justify-between border-b px-4">
-          {/* Left placeholder (titre de page éventuel) */}
-          <div className="text-sm text-muted-foreground" />
+          {/* Titre de la page courante */}
+          <h1 className="text-base font-semibold">{currentPageName}</h1>
           {/* Right slot → ton UserMenu ici */}
           <div className="flex items-center gap-3">{headerRightSlot}</div>
         </header>
