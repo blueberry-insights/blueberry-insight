@@ -109,7 +109,7 @@ export async function resetPasswordAction(
     return { ok: false, error: "Configuration invalide" };
   }
 
-  const redirectTo = `${rawAppUrl.trim()}/auth/callback?flow=reset`;
+  const redirectTo = `${rawAppUrl.trim()}/auth/reset/confirm`;
 
   const auth = await makeAuthServiceForAction();
   const sendResetEmail = makeSendPasswordResetEmail(auth);
