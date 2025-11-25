@@ -15,5 +15,6 @@ export type OfferListItem = {
   id: string;
   title: string;
   description: string | null;
+  createdAt: string;
   status: OfferStatus;
 };

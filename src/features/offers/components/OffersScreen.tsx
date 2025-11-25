@@ -1,4 +1,4 @@
-// src/features/offers/components/OffersScreen.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -11,7 +11,7 @@ type Props = {
   initialOffers: OfferListItem[];
 };
 
-export function OffersScreen({ orgId, initialOffers }: Props) {
+export function OffersScreen({ initialOffers }: Props) {
   const [offers, setOffers] = useState(initialOffers);
   const [open, setOpen] = useState(false);
 

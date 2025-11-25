@@ -10,7 +10,7 @@ export function makeOfferRepo(sb: Db): OfferRepo {
     async listByOrg(orgId: string): Promise<OfferListItem[]> {
       const { data, error } = await sb
         .from("offers")
-        .select("id, title, description, status")
+        .select("id, title, description, status, created_at")
         .eq("org_id", orgId)
         .order("created_at", { ascending: false });
 
@@ -21,6 +21,7 @@ export function makeOfferRepo(sb: Db): OfferRepo {
         title: row.title,
         description: row.description ?? null,
         status: row.status as OfferListItem["status"],
+        createdAt: row.created_at,
       }));
     },
 

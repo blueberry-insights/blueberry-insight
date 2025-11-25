@@ -26,7 +26,6 @@ export function CandidateTable({ candidates, onEditNote, offers }: Props) {
         </thead>
         <tbody className="bg-white">
           {candidates.map((c) => {
-            console.log(c.fullName, c.offerId, offers.map(o => o.id));
             const offer = offers.find((o) => o.id === c.offerId);
             const notePreview = (c.note || "").trim();
             const truncatedNote =

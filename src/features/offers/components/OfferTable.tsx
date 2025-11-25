@@ -18,15 +18,17 @@ export function OfferTable({ offers }: Props) {
           </tr>
         </thead>
         <tbody className="bg-white">
-          {offers.map((o) => (
-            <tr key={o.id} className="border-b last:border-0">
-              <td className="px-4 py-3">{o.title}</td>
-              <td className="px-4 py-3">{o.status}</td>
-              <td className="px-4 py-3">
-                {new Date(o.createdAt).toLocaleDateString("fr-FR")}
-              </td>
-            </tr>
-          ))}
+          {offers.map((o) => {
+            return (
+              <tr key={o.id} className="border-b last:border-0">
+                <td className="px-4 py-3">{o.title}</td>
+                <td className="px-4 py-3">{o.status}</td>
+                <td className="px-4 py-3">
+                  {new Date(o.createdAt).toLocaleDateString("fr-FR")}
+                </td>
+              </tr>
+            );
+          })}
 
           {offers.length === 0 && (
             <tr>

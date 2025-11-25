@@ -46,7 +46,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           : typeof err === "string"
           ? err
           : "unknown-error";
-      console.log("[layout] ensure-org fetch error:", message);
     }
     membership = await getFirstMembership(user.id);
   }
