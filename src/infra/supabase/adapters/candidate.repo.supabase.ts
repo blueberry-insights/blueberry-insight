@@ -71,6 +71,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         source,
         tags,
         note,
+        offerId
       } = input;
       const { data, error } = await sb
         .from("candidates")
@@ -82,6 +83,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
           source: source ?? null,
           tags: tags && tags.length ? tags : null,
           note: note ?? null,
+          offer_id: offerId
         })
         .select("id, full_name, email, status, source, tags, note, created_at, offer_id")
         .single();

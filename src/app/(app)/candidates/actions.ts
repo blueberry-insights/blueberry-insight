@@ -20,6 +20,7 @@ export async function createCandidateAction(formData: FormData): Promise<Ok | Er
     const sourceRaw = String(formData.get("source") ?? "").trim();
     const tagsRaw = String(formData.get("tags") ?? "").trim();
     const noteRaw = String(formData.get("note") ?? "").trim();
+    const offerIdRaw = String(formData.get("offerId") ?? "").trim();
 
     const tags =
       tagsRaw.length > 0
@@ -41,6 +42,7 @@ export async function createCandidateAction(formData: FormData): Promise<Ok | Er
         source: sourceRaw || null,
         tags,
         note: noteRaw || null,
+        offerId : offerIdRaw
       });
       return { ok: true, candidate };
     } catch (err) {

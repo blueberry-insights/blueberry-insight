@@ -8,7 +8,7 @@ export const CandidateSchema = z.object({
   email: z
     .string()
     .trim()
-    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Email invalide")
+    .email("Email invalide")
     .optional()
     .nullable(),
   status: z.enum(candidateStatusValues).optional(),
@@ -26,7 +26,10 @@ export const CandidateSchema = z.object({
     .max(2000, "La note est trop longue")
     .optional()
     .nullable(),
+  offerId: z.string().uuid().optional().nullable(), 
 });
+
+
 export type CandidateInput = z.infer<typeof CandidateSchema>;
 
 export function makeCreateCandidate(repo: CandidateRepo) {
@@ -41,6 +44,7 @@ export function makeCreateCandidate(repo: CandidateRepo) {
       source: parsed.source ?? null,
       tags: parsed.tags?.filter((tag) => tag.length > 0),
       note: parsed.note ?? null,
+      offerId: parsed.offerId ?? null,
     };
 
     return repo.create(input);

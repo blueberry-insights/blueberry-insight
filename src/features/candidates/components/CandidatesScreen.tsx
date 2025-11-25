@@ -54,6 +54,7 @@ export function CandidatesScreen({ orgId, initialCandidates, offers }: Props) {
           setCandidates((prev) => [newCandidate, ...prev]);
           setOpen(false);
         }}
+        offers={offers}
       />
       <EditCandidateNoteModal
         key={editing?.id ?? "none"}

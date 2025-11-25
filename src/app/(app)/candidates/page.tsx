@@ -9,10 +9,14 @@ export default async function CandidatesPage() {
   const { orgId } = await requireUserAndOrgForPage("/candidates");
 
   const sb = await supabaseServerRSC();
-  const repo = makeCandidateRepo(sb);
-  const candidates = await repo.listByOrg(orgId);
+  const candidateRepo = makeCandidateRepo(sb);
   const offerRepo = makeOfferRepo(sb);
-  const offers = await offerRepo.listByOrg(orgId);
+
+  const [candidates, offers] = await Promise.all([
+    candidateRepo.listByOrg(orgId),
+    offerRepo.listByOrg(orgId),
+  ]);
+
   return <CandidatesScreen
     orgId={orgId}
     initialCandidates={candidates}

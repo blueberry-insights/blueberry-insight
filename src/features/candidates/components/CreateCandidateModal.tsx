@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useTransition } from "react";
@@ -8,15 +7,23 @@ import { FormSubmit } from "@/shared/ui/FormSubmit";
 import { GenericForm } from "@/shared/ui/GenericForm";
 import type { CandidateListItem } from "@/core/models/Candidate";
 import { candidateStatusValues } from "@/core/models/Candidate";
+import { OfferListItem } from "@/core/models/Offer";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   orgId: string;
   onCreated: (c: CandidateListItem) => void;
+  offers: OfferListItem[];
 };
 
-export function CreateCandidateModal({ open, onClose, orgId, onCreated }: Props) {
+export function CreateCandidateModal({
+  open,
+  onClose,
+  orgId,
+  onCreated,
+  offers,
+}: Props) {
   const [values, setValues] = useState({
     fullName: "",
     email: "",
@@ -24,6 +31,7 @@ export function CreateCandidateModal({ open, onClose, orgId, onCreated }: Props)
     source: "",
     tags: "",
     note: "",
+    offerId: "",
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +62,7 @@ export function CreateCandidateModal({ open, onClose, orgId, onCreated }: Props)
       form.set("source", values.source.trim());
       form.set("tags", values.tags.trim());
       form.set("note", values.note.trim());
-
+      form.set("offerId", values.offerId);
       const res = await createCandidateAction(form);
       if (!res.ok) {
         setError(res.error ?? "Erreur lors de la création");
@@ -79,8 +87,6 @@ export function CreateCandidateModal({ open, onClose, orgId, onCreated }: Props)
             Fermer
           </button>
         </div>
-
-        {/* 🔁 ici on n'utilise PAS action, on pilote tout en JS */}
         <GenericForm onSubmit={handleSubmit}>
           <TextField
             name="fullName"
@@ -117,7 +123,27 @@ export function CreateCandidateModal({ open, onClose, orgId, onCreated }: Props)
               ))}
             </select>
           </div>
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-slate-700">
+              Offre associée
+            </label>
 
+            <select
+              name="offerId"
+              className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm 
+               focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 transition"
+              value={values.offerId}
+              onChange={(e) => set("offerId", e.target.value)}
+            >
+              <option value="">Aucune</option>
+
+              {offers.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.title}
+                </option>
+              ))}
+            </select>
+          </div>
           {/* Source */}
           <TextField
             name="source"

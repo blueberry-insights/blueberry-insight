@@ -1,10 +1,15 @@
-export default function OffersPage() {
-  return (
-    <div className="space-y-4">
-      <h1 className="text-lg font-semibold">Offres</h1>
-      <div className="rounded-xl border bg-card p-4 text-muted-foreground">
-        Liste des offres à venir…
-      </div>
-    </div>
-  );
+import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
+import { supabaseServerRSC } from "@/infra/supabase/client";
+import { requireUserAndOrgForPage } from "@/infra/supabase/session";
+
+import { OffersScreen } from "@/features/offers/components/OffersScreen";
+
+export default async function OffersPage() {
+  const { orgId } = await requireUserAndOrgForPage("/offers");
+  const sb = await supabaseServerRSC(); 
+  const offerRepo = makeOfferRepo(sb);
+  const offers = await offerRepo.listByOrg(orgId);
+  
+  return <OffersScreen initialOffers={offers} orgId={orgId} />;
+  
 }

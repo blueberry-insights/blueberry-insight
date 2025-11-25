@@ -134,9 +134,11 @@ export type Database = {
                     org_id: string;
                     title: string;
                     status: string | null;
+                    profile_type: string | null;
+                    description: string | null;
+                    created_by: string | null;
                     created_at: string;
-                    updated_at: string | null;
-                };
+                  }
                 Insert: {
                     id?: string;
                     org_id: string;

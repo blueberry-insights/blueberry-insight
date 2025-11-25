@@ -11,6 +11,7 @@ export type CreateCandidateInput = {
   source?: string | null;
   tags?: string[];
   note?: string | null;
+  offerId?: string | null;
 };
 
 export interface CandidateRepo {
