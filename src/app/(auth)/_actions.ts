@@ -75,10 +75,11 @@ export async function registerAction(formData: FormData) {
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  // Ne pas mettre de query params dans emailRedirectTo, Supabase ajoute automatiquement type=signup
+
+  // On marque explicitement le flow "signup" + on passe l'email
   const emailRedirectTo =
-    appUrl && appUrl.startsWith("http") 
-      ? `${appUrl}/auth/callback` 
+    appUrl && appUrl.startsWith("http")
+      ? `${appUrl}/auth/callback?flow=signup&email=${encodeURIComponent(parsed.data.email)}`
       : undefined;
 
   const sb = await supabaseServerAction();

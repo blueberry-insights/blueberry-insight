@@ -8,11 +8,10 @@ export async function resendSignupEmail(formData: FormData) {
 
   const sb = await supabaseServerAction();
 
-  // Construire l'URL de redirection (Supabase ajoute automatiquement type=signup)
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
   const emailRedirectTo =
     appUrl && appUrl.startsWith("http")
-      ? `${appUrl}/auth/callback`
+      ? `${appUrl}/auth/callback?flow=signup&email=${encodeURIComponent(email)}`
       : undefined;
 
   try {
@@ -25,3 +24,4 @@ export async function resendSignupEmail(formData: FormData) {
     console.error("Resend signup email error:", err);
   }
 }
+

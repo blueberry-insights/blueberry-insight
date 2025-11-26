@@ -53,7 +53,7 @@ export default function LoginForm({ redirectTo, serverError, resetSuccess }: Log
   return (
     <>
       <motion.div {...motionProps} className="w-full max-w-md space-y-4">
-        <h1 className="text-xl font-semibold text-center text-foreground">Blueberry Insight</h1>
+        <h1 className="text-xl font-semibold text-center text-foreground">Blueberry Insights</h1>
 
         <GenericForm action={loginAction} onSubmit={onSubmit}>
           <input type="hidden" name="redirectTo" value={redirectTo} />
