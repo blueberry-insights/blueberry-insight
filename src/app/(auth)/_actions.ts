@@ -76,7 +76,9 @@ export async function registerAction(formData: FormData) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
   const emailRedirectTo =
-    appUrl && appUrl.startsWith("http") ? `${appUrl}/auth/callback` : undefined;
+    appUrl && appUrl.startsWith("http") 
+      ? `${appUrl}/auth/callback?flow=signup` 
+      : undefined;
 
   const sb = await supabaseServerAction();
   const registerUser = makeRegisterUser({
