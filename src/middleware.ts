@@ -19,6 +19,17 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Laisse passer les routes d'authentification (login, register, callback, reset, verify)
+  // Sinon le Basic Auth bloque les callbacks Supabase
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/api/auth")
+  ) {
+    return NextResponse.next();
+  }
+
   const auth = req.headers.get("authorization");
 
   if (!auth?.startsWith("Basic ")) {
