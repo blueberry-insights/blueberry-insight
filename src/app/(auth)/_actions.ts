@@ -12,6 +12,10 @@ import { makeLoginUser } from "@/core/usecases/loginUser";
 import { makeRegisterUser } from "@/core/usecases/registerUser";
 import { makeSendPasswordResetEmail } from "@/core/usecases/sendPasswordResetEmail";
 import { makeUpdatePassword } from "@/core/usecases/updatePassword";
+import { supabaseServerAction } from "@/infra/supabase/client";
+import { makeOrgRepo } from "@/infra/supabase/adapters/org.repo.supabase";
+import { makeMembershipRepo } from "@/infra/supabase/adapters/membership.repo.supabase";
+import { DefaultSlugger } from "@/infra/supabase/utils/slugger";
 
 type ResetState = { ok: boolean; error?: string };
 type UpdateState = { ok: boolean; error?: string };
@@ -74,7 +78,13 @@ export async function registerAction(formData: FormData) {
   const emailRedirectTo =
     appUrl && appUrl.startsWith("http") ? `${appUrl}/auth/callback` : undefined;
 
-  const registerUser = makeRegisterUser(auth);
+  const sb = await supabaseServerAction();
+  const registerUser = makeRegisterUser({
+    auth,
+    orgRepo: makeOrgRepo(sb),
+    membershipRepo: makeMembershipRepo(sb),
+    slugger: DefaultSlugger,
+  });
   const result = await registerUser({
     email: parsed.data.email,
     password: parsed.data.password,
@@ -109,7 +119,7 @@ export async function resetPasswordAction(
     return { ok: false, error: "Configuration invalide" };
   }
 
-  const redirectTo = `${rawAppUrl.trim()}/auth/reset/confirm`;
+  const redirectTo = `${rawAppUrl.trim()}/auth/callback?flow=reset`;
 
   const auth = await makeAuthServiceForAction();
   const sendResetEmail = makeSendPasswordResetEmail(auth);

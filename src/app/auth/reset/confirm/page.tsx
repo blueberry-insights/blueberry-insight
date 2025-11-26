@@ -1,18 +1,17 @@
-// src/app/auth/reset/confirm/page.tsx
+
 "use client";
 
-import { useState, useActionState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { motion } from "framer-motion";
 
 import { useAuthMotionProps } from "@/shared/hooks/useAuthMotion";
-import { updatePasswordAction } from "@/app/(auth)/_actions";
 import { FormSubmit } from "@/shared/ui/FormSubmit";
 import { GenericForm } from "@/shared/ui/GenericForm";
 import { TextField } from "@/shared/ui/fields/TextField";
-
-type UpdateState = { ok: boolean; error?: string };
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 const ClientUpdateSchema = z
   .object({
@@ -25,10 +24,8 @@ const ClientUpdateSchema = z
   });
 
 export default function ResetConfirmPage() {
-  const [state, formAction] = useActionState<UpdateState, FormData>(
-    updatePasswordAction,
-    { ok: false, error: undefined }
-  );
+  const router = useRouter();
+  const supabase = supabaseBrowser();
 
   const [values, setValues] = useState({
     password: "",
@@ -38,18 +35,23 @@ export default function ResetConfirmPage() {
     password?: string;
     confirmPassword?: string;
   }>({});
+  const [globalError, setGlobalError] = useState<string | undefined>();
+  const [pending, setPending] = useState(false);
 
   const motionProps = useAuthMotionProps();
 
   function set<K extends keyof typeof values>(k: K, v: (typeof values)[K]) {
     setValues((s) => ({ ...s, [k]: v }));
     setFieldErrors((e) => ({ ...e, [k]: undefined }));
+    if (globalError) setGlobalError(undefined);
   }
 
-  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setGlobalError(undefined);
+
     const parsed = ClientUpdateSchema.safeParse(values);
     if (!parsed.success) {
-      e.preventDefault();
       const errs: typeof fieldErrors = {};
       for (const issue of parsed.error.issues) {
         const k = issue.path[0] as keyof typeof values;
@@ -58,6 +60,28 @@ export default function ResetConfirmPage() {
       setFieldErrors(errs);
       return;
     }
+
+    setPending(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: values.password,
+      });
+
+      if (error) {
+        console.error("[ResetConfirm] updateUser error:", error);
+        setGlobalError(
+          error.message || "Impossible de mettre à jour le mot de passe."
+        );
+        setPending(false);
+        return;
+      }
+
+      router.push("/login?reset=success");
+    } catch (err: any) {
+      console.error("[ResetConfirm] unexpected error:", err);
+      setGlobalError("Erreur inattendue. Réessaie plus tard.");
+      setPending(false);
+    }
   }
 
   return (
@@ -65,7 +89,7 @@ export default function ResetConfirmPage() {
       <motion.div {...motionProps} className="w-full max-w-md space-y-4">
         <h1 className="text-xl font-semibold text-center">Blueberry Insight</h1>
 
-        <GenericForm action={formAction} onSubmit={onSubmit}>
+        <GenericForm onSubmit={onSubmit}>
           <h2 className="text-base font-semibold">
             Définir un nouveau mot de passe
           </h2>
@@ -95,11 +119,13 @@ export default function ResetConfirmPage() {
             error={fieldErrors.confirmPassword}
           />
 
-          {state?.error && (
-            <p className="text-sm text-red-600">{state.error}</p>
+          {globalError && (
+            <p className="text-sm text-red-600">{globalError}</p>
           )}
 
-          <FormSubmit>Mettre à jour le mot de passe</FormSubmit>
+          <FormSubmit>
+            {pending ? "Mise à jour..." : "Mettre à jour le mot de passe"}
+          </FormSubmit>
 
           <p className="text-center text-sm text-muted-foreground">
             <Link
