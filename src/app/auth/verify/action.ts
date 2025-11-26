@@ -8,12 +8,20 @@ export async function resendSignupEmail(formData: FormData) {
 
   const sb = await supabaseServerAction();
 
+  // Construire l'URL de redirection avec le flow signup
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const emailRedirectTo =
+    appUrl && appUrl.startsWith("http")
+      ? `${appUrl}/auth/callback?flow=signup`
+      : undefined;
+
   try {
     await sb.auth.resend({
       type: "signup",
       email,
+      options: emailRedirectTo ? { emailRedirectTo } : undefined,
     });
-  }  catch (err: unknown) {
+  } catch (err: unknown) {
     console.error("Resend signup email error:", err);
   }
 }

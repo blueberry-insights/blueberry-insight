@@ -1,7 +1,7 @@
 import { resendSignupEmail } from "./action";
 
 type VerifyPageProps = {
-  searchParams?: Promise<{ email?: string }>;
+  searchParams?: Promise<{ email?: string; error?: string }>;
 };
 
 export default async function VerifyPage({ searchParams }: VerifyPageProps) {
@@ -9,11 +9,19 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
 
   const email =
     typeof sp.email === "string" && sp.email.trim().length > 0 ? sp.email : null;
+  const error =
+    typeof sp.error === "string" && sp.error.trim().length > 0 ? sp.error : null;
 
   return (
     <main className="min-h-dvh flex items-center justify-center px-6">
       <div className="max-w-lg text-center">
         <h1 className="text-2xl font-semibold mb-3">Vérifie ta boîte mail</h1>
+
+        {error && (
+          <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+            {error}
+          </div>
+        )}
 
         <p className="text-sm text-muted-foreground">
           {email ? (

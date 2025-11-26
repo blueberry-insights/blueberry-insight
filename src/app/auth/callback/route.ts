@@ -21,13 +21,50 @@ export async function GET(req: Request) {
   const code = url.searchParams.get("code");
   const type = (url.searchParams.get("type") || "").toLowerCase();
   const flow = (url.searchParams.get("flow") || "").toLowerCase();
+  
+  // Gérer les erreurs renvoyées par Supabase
+  const error = url.searchParams.get("error");
+  const errorCode = url.searchParams.get("error_code");
+  const errorDescription = url.searchParams.get("error_description");
 
   console.log("[auth/callback] params:", { 
     hasCode: !!code, 
     type, 
-    flow, 
+    flow,
+    error,
+    errorCode,
     pathname: url.pathname 
   });
+
+  // Si Supabase a renvoyé une erreur, rediriger avec le message approprié
+  if (error) {
+    let errorMessage = "Erreur d'authentification";
+    let redirectPath = "/login";
+    
+    if (errorCode === "otp_expired") {
+      errorMessage = "Le lien a expiré. Demande un nouveau lien de confirmation.";
+      // Pour signup, rediriger vers la page de vérification pour pouvoir renvoyer l'email
+      if (flow === "signup" || type === "signup") {
+        redirectPath = "/auth/verify";
+      }
+    } else if (errorCode === "email_not_confirmed") {
+      errorMessage = "Email non confirmé. Vérifie ta boîte mail.";
+      if (flow === "signup" || type === "signup") {
+        redirectPath = "/auth/verify";
+      }
+    } else if (errorDescription) {
+      errorMessage = decodeURIComponent(errorDescription);
+      if (flow === "signup" || type === "signup") {
+        redirectPath = "/auth/verify";
+      }
+    }
+    
+    console.error("[auth/callback] Supabase error:", { error, errorCode, errorDescription, flow, type });
+    
+    return NextResponse.redirect(
+      new URL(`${redirectPath}?error=${encodeURIComponent(errorMessage)}`, url)
+    );
+  }
 
   const auth = await makeAuthServiceForAction();
 
