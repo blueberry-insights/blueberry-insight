@@ -10,9 +10,7 @@ import { registerAction } from "../_actions";
 import { getPasswordStrength } from "@/shared/utils/passwordStrength";
 import { useAuthMotionProps } from "@/shared/hooks/useAuthMotion";
 
-import { FormSubmit } from "@/shared/ui/FormSubmit";
-import { GenericForm } from "@/shared/ui/GenericForm";
-import { TextField } from "@/shared/ui/fields/TextField";
+import { FormSubmit, AuthForm, TextField } from "@/shared/ui/forms";
 
 const RegisterClientSchema = z
     .object({
@@ -76,7 +74,7 @@ export default function RegisterForm({ serverError }: RegisterFormProps) {
                     Blueberry Insight
                 </h1>
 
-                <GenericForm action={registerAction} onSubmit={onSubmit}>
+                <AuthForm action={registerAction} onSubmit={onSubmit}>
                     <h2 className="text-lg font-semibold text-foreground">
                         Créer un compte
                     </h2>
@@ -169,7 +167,7 @@ export default function RegisterForm({ serverError }: RegisterFormProps) {
                             Se connecter
                         </Link>
                     </p>
-                </GenericForm>
+                </AuthForm>
             </motion.div>
         </>
     );

@@ -10,9 +10,7 @@ import { loginAction } from "../_actions";
 
 import { useAuthMotionProps } from "@/shared/hooks/useAuthMotion";
 
-import { FormSubmit } from "@/shared/ui/FormSubmit";
-import { GenericForm } from "@/shared/ui/GenericForm";
-import { TextField } from "@/shared/ui/fields/TextField";
+import { FormSubmit, AuthForm, TextField } from "@/shared/ui/forms";
 
 const LoginClientSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -55,7 +53,7 @@ export default function LoginForm({ redirectTo, serverError, resetSuccess }: Log
       <motion.div {...motionProps} className="w-full max-w-md space-y-4">
         <h1 className="text-xl font-semibold text-center text-foreground">Blueberry Insights</h1>
 
-        <GenericForm action={loginAction} onSubmit={onSubmit}>
+        <AuthForm action={loginAction} onSubmit={onSubmit}>
           <input type="hidden" name="redirectTo" value={redirectTo} />
 
           <h2 className="text-lg font-semibold text-foreground">Connexion</h2>
@@ -104,7 +102,7 @@ export default function LoginForm({ redirectTo, serverError, resetSuccess }: Log
               Sign up
             </Link>
           </p>
-        </GenericForm>
+        </AuthForm>
       </motion.div>
     </>
   );

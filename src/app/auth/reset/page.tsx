@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { useAuthMotionProps } from "@/shared/hooks/useAuthMotion";
 
 import { resetPasswordAction } from "@/app/(auth)/_actions";
-import { FormSubmit } from "@/shared/ui/FormSubmit";
+import { FormSubmit } from "@/shared/ui/forms";
 
 type ResetState = { ok: boolean; error?: string };
 

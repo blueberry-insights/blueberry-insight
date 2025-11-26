@@ -8,11 +8,12 @@ import {
 } from "@/shared/validation/auth";
 import { sanitizeRedirect } from "@/shared/utils/sanitizeRedirect";
 import { makeAuthServiceForAction } from "@/infra/supabase/composition";
-import { makeLoginUser } from "@/core/usecases/loginUser";
-import { makeRegisterUser } from "@/core/usecases/registerUser";
-import { makeSendPasswordResetEmail } from "@/core/usecases/sendPasswordResetEmail";
-import { makeUpdatePassword } from "@/core/usecases/updatePassword";
-import { supabaseServerAction } from "@/infra/supabase/client";
+import { supabaseAdmin } from "@/infra/supabase/client";
+import { makeLoginUser } from "@/core/usecases/auth/loginUser";
+import { makeRegisterUser } from "@/core/usecases/auth/registerUser";
+import { makeSendPasswordResetEmail } from "@/core/usecases/auth/sendPasswordResetEmail";
+import { makeUpdatePassword } from "@/core/usecases/auth/updatePassword";
+
 import { makeOrgRepo } from "@/infra/supabase/adapters/org.repo.supabase";
 import { makeMembershipRepo } from "@/infra/supabase/adapters/membership.repo.supabase";
 import { DefaultSlugger } from "@/infra/supabase/utils/slugger";
@@ -60,6 +61,7 @@ export async function logoutAction() {
 
 export async function registerAction(formData: FormData) {
   const auth = await makeAuthServiceForAction();
+
   const payload = {
     fullName: String(formData.get("fullName") || ""),
     orgName: String(formData.get("orgName") || ""),
@@ -76,19 +78,25 @@ export async function registerAction(formData: FormData) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
-  // On marque explicitement le flow "signup" + on passe l'email
+  // Important : on marque bien le flow signup + on passe l'email au callback
   const emailRedirectTo =
     appUrl && appUrl.startsWith("http")
-      ? `${appUrl}/auth/callback?flow=signup&email=${encodeURIComponent(parsed.data.email)}`
+      ? `${appUrl}/auth/callback?flow=signup&email=${encodeURIComponent(
+          parsed.data.email
+        )}`
       : undefined;
 
-  const sb = await supabaseServerAction();
+  // ⚠️ ICI : on utilise le client ADMIN (service role)
+  // → pas de RLS qui bloque la création d'organisation/membership
+  const adminSb = supabaseAdmin();
+
   const registerUser = makeRegisterUser({
     auth,
-    orgRepo: makeOrgRepo(sb),
-    membershipRepo: makeMembershipRepo(sb),
+    orgRepo: makeOrgRepo(adminSb),
+    membershipRepo: makeMembershipRepo(adminSb),
     slugger: DefaultSlugger,
   });
+
   const result = await registerUser({
     email: parsed.data.email,
     password: parsed.data.password,
@@ -98,17 +106,22 @@ export async function registerAction(formData: FormData) {
   });
 
   if (!result.ok) {
-    const generic =
-      result.reason === "email-in-use" && process.env.NODE_ENV !== "production"
-        ? "Un compte existe peut-être déjà avec cet email."
-        : process.env.NODE_ENV === "production"
-          ? "Inscription en cours. Vérifie ton email."
-          : "Impossible de créer le compte.";
-    return redirect(`/register?error=${encodeURIComponent(generic)}`);
+    let errorMessage: string;
+
+    if (result.reason === "email-in-use") {
+      errorMessage =
+        "Un compte existe déjà avec cet email. Essaie de te connecter ou de réinitialiser ton mot de passe.";
+    } else {
+      errorMessage = "Impossible de créer le compte pour le moment.";
+    }
+
+    return redirect(`/register?error=${encodeURIComponent(errorMessage)}`);
   }
 
+  // Signup OK → on envoie l'utilisateur vers la page de vérification
   return redirect(`/auth/verify?email=${encodeURIComponent(parsed.data.email)}`);
 }
+
 
 export async function resetPasswordAction(
   _prev: ResetState,
