@@ -33,7 +33,9 @@ export async function GET(req: Request) {
     flow,
     error,
     errorCode,
-    pathname: url.pathname 
+    errorDescription,
+    pathname: url.pathname,
+    fullUrl: url.toString()
   });
 
   // Si Supabase a renvoyé une erreur, rediriger avec le message approprié

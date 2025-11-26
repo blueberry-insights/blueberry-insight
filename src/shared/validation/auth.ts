@@ -1,8 +1,10 @@
 // shared/validation/auth.ts
 import { z } from "zod";
 
+// Validation plus permissive : au moins 8 caractères, au moins 1 lettre et 1 chiffre
+// Accepte tous les caractères Unicode (pas seulement ASCII)
 const passwordRules =
-  /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d !"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]{8,}$/;
+  /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 const EmailSchema = z
   .string()
   .min(1, "Email requis")

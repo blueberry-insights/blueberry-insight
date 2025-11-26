@@ -38,15 +38,34 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
           )}
         </p>
 
+        {error && !email && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Si le lien a expiré, entre ton email ci-dessous pour recevoir un nouveau lien.
+          </p>
+        )}
+
         <div className="mt-6 flex items-center justify-center gap-4 text-sm">
           <a href="/login" className="text-primary hover:underline">
             Déjà confirmé ? Se connecter
           </a>
-          {email && (
+          {email ? (
             <form action={resendSignupEmail} className="inline-block">
               <input type="hidden" name="email" value={email} />
               <button className="hover:underline text-muted-foreground" type="submit">
-                Renvoyer l’email
+                Renvoyer l'email
+              </button>
+            </form>
+          ) : (
+            <form action={resendSignupEmail} className="inline-block">
+              <input
+                type="email"
+                name="email"
+                placeholder="ton@email.com"
+                required
+                className="mr-2 rounded border border-gray-300 px-2 py-1 text-sm"
+              />
+              <button className="hover:underline text-muted-foreground" type="submit">
+                Renvoyer l'email
               </button>
             </form>
           )}
