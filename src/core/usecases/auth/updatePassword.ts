@@ -1,4 +1,4 @@
-import type { AuthService } from "../ports/AuthService";
+import type { AuthService } from "@/core/ports/AuthService";
 
 export type UpdatePasswordInput = {
   password: string;

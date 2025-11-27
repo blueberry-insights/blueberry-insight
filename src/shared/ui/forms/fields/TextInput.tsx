@@ -1,7 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import { FormError } from "@/shared/ui/FormError";
+import { FormError } from "./FormError";
 
 type Props = React.InputHTMLAttributes<HTMLInputElement> & {
   label?: string;

@@ -1,46 +1,28 @@
 "use server";
 
-import { z, ZodError } from "zod";
+import { ZodError } from "zod";
+import type { Offer } from "@/core/models/Offer";
 import { withAuth } from "@/infra/supabase/session";
 import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
-import type { Offer } from "@/core/models/Offer";
-import { offerStatusValues } from "@/core/models/Offer";
+import { makeCreateOffer } from "@/core/usecases/offers/createOffer";
 
 type Ok = { ok: true; offer: Offer };
 type Err = { ok: false; error: string };
 
-const OfferSchema = z.object({
-  title: z.string().trim().min(3, "Le titre doit contenir au moins 3 caractères"),
-  description: z
-    .string()
-    .trim()
-    .max(5000, "La description est trop longue")
-    .optional()
-    .nullable(),
-  status: z
-    .enum(offerStatusValues)
-    .optional()
-    .nullable(),
-});
-
 export async function createOfferAction(formData: FormData): Promise<Ok | Err> {
   return withAuth(async (ctx) => {
+    const raw = {
+      orgId: ctx.orgId,
+      title: formData.get("title"),
+      description: formData.get("description") || null,
+      status: formData.get("status") || undefined,
+    };
+
+    const repo = makeOfferRepo(ctx.sb);
+    const createOffer = makeCreateOffer(repo);
+
     try {
-      const parsed = OfferSchema.parse({
-        title: formData.get("title"),
-        description: formData.get("description"),
-        status: formData.get("status") || "draft",
-      });
-
-      const repo = makeOfferRepo(ctx.sb);
-
-      const offer = await repo.create({
-        orgId: ctx.orgId,
-        title: parsed.title,
-        description: parsed.description ?? null,
-        status: parsed.status ?? "draft",
-      });
-
+      const offer = await createOffer(raw);
       return { ok: true, offer };
     } catch (err) {
       if (err instanceof ZodError) {

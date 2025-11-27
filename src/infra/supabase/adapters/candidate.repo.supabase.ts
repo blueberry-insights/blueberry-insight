@@ -11,7 +11,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
       const { data, error } = await sb
         .from("candidates")
         .select(
-          "id, full_name, email, status, source, tags, note, created_at, offer_id", 
+          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at", 
         )
         .eq("org_id", orgId)
         .order("created_at", { ascending: false });
@@ -28,8 +28,66 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         tags: (row.tags as string[] | null) ?? [],
         note: row.note ?? null,
         createdAt: row.created_at,
+        cvPath: row.cv_path ?? null,
+        cvOriginalName: row.cv_original_name ?? null,
+        cvMimeType: row.cv_mime_type ?? null,
+        cvSizeBytes: row.cv_size_bytes ?? null,
+        cvUploadedAt: row.cv_uploaded_at ?? null,
       }));
     },
+    async getById(orgId: string, candidateId: string): Promise<CandidateListItem | null> {
+      const { data, error } = await sb
+        .from("candidates")
+        .select(
+          `
+            id,
+            full_name,
+            email,
+            status,
+            source,
+            tags,
+            note,
+            created_at,
+            offer_id,
+            cv_path,
+            cv_original_name,
+            cv_mime_type,
+            cv_size_bytes,
+            cv_uploaded_at
+          `
+        )
+        .eq("org_id", orgId)
+        .eq("id", candidateId)
+        .single();
+    
+      if (error) {
+        if (error.code === "PGRST116") {
+ 
+          return null;
+        }
+        throw error;
+      }
+    
+      if (!data) return null;
+    
+      return {
+        id: data.id,
+        fullName: data.full_name,
+        email: data.email,
+        status: (data.status as CandidateStatus | null) ?? null,
+        source: data.source ?? null,
+        tags: (data.tags as string[] | null) ?? [],
+        note: data.note ?? null,
+        createdAt: data.created_at,
+        offerId: data.offer_id ?? null,
+  
+        cvPath: data.cv_path ?? null,
+        cvOriginalName: data.cv_original_name ?? null,
+        cvMimeType: data.cv_mime_type ?? null,
+        cvSizeBytes: data.cv_size_bytes ?? null,
+        cvUploadedAt: data.cv_uploaded_at ?? null,
+      };
+    },    
     async updateNote({
       orgId,
       candidateId,
@@ -41,10 +99,10 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
     }): Promise<CandidateListItem> {
       const { data, error } = await sb
         .from("candidates")
-        .update({ notes: note })
+        .update({ note: note })
         .eq("id", candidateId)
         .eq("org_id", orgId)
-        .select("id, full_name, email, status, source, tags, note:notes, created_at, offer_id")
+        .select("id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at")
         .single();
 
       if (error || !data) throw error ?? new Error("Update failed");
@@ -59,6 +117,11 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         note: data.note ?? null,
         offerId: data.offer_id ?? null,
         createdAt: data.created_at,
+        cvPath: data.cv_path ?? null,
+        cvOriginalName: data.cv_original_name ?? null,
+        cvMimeType: data.cv_mime_type ?? null,
+        cvSizeBytes: data.cv_size_bytes ?? null,
+        cvUploadedAt: data.cv_uploaded_at ?? null,
       };
     },
 
@@ -85,7 +148,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
           note: note ?? null,
           offer_id: offerId
         })
-        .select("id, full_name, email, status, source, tags, note, created_at, offer_id")
+        .select("id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at")
         .single();
 
       if (error || !data) throw error ?? new Error("Insert failed");
@@ -100,7 +163,64 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         tags: (data.tags as string[] | null) ?? [],
         note: data.note ?? null,
         createdAt: data.created_at,
+        cvPath: data.cv_path ?? null,
+        cvOriginalName: data.cv_original_name ?? null,
+        cvMimeType: data.cv_mime_type ?? null,
+        cvSizeBytes: data.cv_size_bytes ?? null,
+        cvUploadedAt: data.cv_uploaded_at ?? null,
       };
     },
+    async attachCv({
+      orgId,
+      candidateId,
+      cvPath,
+      originalName,
+      mimeType,
+      sizeBytes,
+      uploadedAt,
+    }: {
+      orgId: string;
+      candidateId: string;
+      cvPath: string;
+      originalName: string;
+      mimeType: string;
+      sizeBytes: number;
+      uploadedAt: string;
+    }): Promise<CandidateListItem> {
+      const { data, error } = await sb
+        .from("candidates")
+        .update({
+          cv_path: cvPath,
+          cv_original_name: originalName,
+          cv_mime_type: mimeType,
+          cv_size_bytes: sizeBytes,
+          cv_uploaded_at: uploadedAt,
+        } as any) // TS râlera car Insert/Update n'ont pas ces champs → à harmoniser plus tard
+        .eq("id", candidateId)
+        .eq("org_id", orgId)
+        .select(
+          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
+        )
+        .single();
+    
+      if (error || !data) throw error ?? new Error("Attach CV failed");
+    
+      return {
+        id: data.id,
+        fullName: data.full_name,
+        email: data.email,
+        status: (data.status as CandidateStatus | null) ?? null,
+        source: data.source ?? null,
+        tags: (data.tags as string[] | null) ?? [],
+        note: data.note ?? null,
+        offerId: data.offer_id ?? null,
+        createdAt: data.created_at,
+        cvPath: data.cv_path ?? null,
+        cvOriginalName: data.cv_original_name ?? null,
+        cvMimeType: data.cv_mime_type ?? null,
+        cvSizeBytes: data.cv_size_bytes ?? null,
+        cvUploadedAt: data.cv_uploaded_at ?? null,
+      };
+    }    
   };
 }

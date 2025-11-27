@@ -10,12 +10,17 @@ export function authServiceSupabase(sb: SupabaseClient): AuthService {
       if (error) throw error;
     },
     async signUp(email, password, meta, emailRedirectTo) {
+      console.log("[authServiceSupabase] signUp called with emailRedirectTo:", emailRedirectTo);
       const { data, error } = await sb.auth.signUp({
         email,
         password,
         options: { data: meta, ...(emailRedirectTo ? { emailRedirectTo } : {}) },
       });
-      if (error) throw error;
+      if (error) {
+        console.error("[authServiceSupabase] signUp error:", error);
+        throw error;
+      }
+      console.log("[authServiceSupabase] signUp success, user created:", !!data.user);
       return { user: data.user };
     },
     async signOut() {

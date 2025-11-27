@@ -1,18 +1,10 @@
+// app/(app)/layout.tsx
 import { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { AppShell } from "@/shared/ui/AppShell";
-import { UserMenu } from "@/shared/ui/UserMenu";
-import { ButtonLogout } from "@/shared/ui/ButtonLogout";
+import { AppShell } from "@/shared/ui/layout";
+import { UserMenu, ButtonLogout } from "@/shared/ui/navigation";
 import { getSessionUser, getFirstMembership } from "@/infra/supabase/session";
 
-function absoluteUrl(h: Headers, path = "/") {
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("x-forwarded-host") ?? h.get("host")!;
-  return `${proto}://${host}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-// 🧾 Typage minimal pour ton user_metadata Supabase
 type UserMetadata = {
   full_name?: string;
   org_name?: string;
@@ -24,34 +16,18 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await getSessionUser();
   if (!user) redirect("/login?redirectedFrom=%2Fdashboard");
 
-  let membership = await getFirstMembership(user.id);
+  const membership = await getFirstMembership(user.id);
 
   if (!membership) {
-    const h = await headers();
-    try {
-      const res = await fetch(absoluteUrl(h, "/api/ensure-org"), {
-        method: "POST",
-        headers: { cookie: h.get("cookie") ?? "" },
-        cache: "no-store",
-        next: { revalidate: 0 },
-      });
+    console.error("[AppLayout] user without membership:", user.id);
 
-      if (res.status === 401) {
-        redirect("/login?redirectedFrom=%2Fdashboard");
-      }
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : typeof err === "string"
-          ? err
-          : "unknown-error";
-    }
-    membership = await getFirstMembership(user.id);
+    redirect(
+      "/login?error=" +
+        encodeURIComponent("Compte mal initialisé. Réessaie l’inscription.")
+    );
   }
 
-  const orgName = membership?.organizations?.name ?? "";
-
+  const orgName = membership.organizations?.name ?? "";
   const meta = (user.user_metadata ?? {}) as UserMetadata;
 
   const displayName =
@@ -75,11 +51,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       defaultCollapsed={false}
       autoCollapseOnNavigate={false}
     >
-      {!membership && (
-        <div className="mx-4 my-2 rounded-md border border-yellow-300/40 bg-yellow-50 px-3 py-2 text-xs text-yellow-900">
-          Initialisation de votre organisation… Si ce message persiste, rechargez la page.
-        </div>
-      )}
       {children}
     </AppShell>
   );

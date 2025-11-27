@@ -5,7 +5,7 @@ type Props = {
   orgName?: string;
   avatarUrl?: string | null;
   collapsed?: boolean;
-  size?: "sm" | "md";      // 👈 header vs sidebar
+  size?: "sm" | "md";     
   className?: string;
 };
 

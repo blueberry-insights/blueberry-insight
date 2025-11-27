@@ -2,9 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createCandidateAction } from "@/app/(app)/candidates/actions";
-import { TextField } from "@/shared/ui/fields/TextField";
-import { FormSubmit } from "@/shared/ui/FormSubmit";
-import { GenericForm } from "@/shared/ui/GenericForm";
+import { TextField, FormSubmit, GenericForm } from "@/shared/ui/forms";
 import type { CandidateListItem } from "@/core/models/Candidate";
 import { candidateStatusValues } from "@/core/models/Candidate";
 import { OfferListItem } from "@/core/models/Offer";
@@ -87,7 +85,7 @@ export function CreateCandidateModal({
             Fermer
           </button>
         </div>
-        <GenericForm onSubmit={handleSubmit}>
+        <GenericForm onSubmit={handleSubmit} className="space-y-4">
           <TextField
             name="fullName"
             label="Nom complet"

@@ -1,12 +1,11 @@
-// src/core/models/Candidate.ts
 export const candidateStatusValues = [
-  "new",        // Candidat vient d’entrer dans le vivier
-  "screening",  // CV en cours de lecture / short-list
-  "test",       // Test envoyé / en cours
-  "interview",  // Entretien planifié / en cours
-  "offer",      // Offre faite
-  "hired",      // Embauché
-  "archived",   //
+  "new",
+  "screening",
+  "test",
+  "interview",
+  "offer",
+  "hired",
+  "archived",
 ] as const;
 
 export type CandidateStatus = (typeof candidateStatusValues)[number];
@@ -21,4 +20,9 @@ export type CandidateListItem = {
   tags: string[];
   note: string | null;
   createdAt: string;
+  cvPath?: string | null;
+  cvOriginalName?: string | null;
+  cvMimeType?: string | null;
+  cvSizeBytes?: number | null;
+  cvUploadedAt?: string | null;
 };

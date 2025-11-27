@@ -2,9 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createOfferAction } from "@/app/(app)/offers/actions";
-import { TextField } from "@/shared/ui/fields/TextField";
-import { FormSubmit } from "@/shared/ui/FormSubmit";
-import { GenericForm } from "@/shared/ui/GenericForm";
+import { TextField, FormSubmit, GenericForm } from "@/shared/ui/forms";
 import type { Offer, OfferStatus } from "@/core/models/Offer";
 import { offerStatusValues } from "@/core/models/Offer";
 

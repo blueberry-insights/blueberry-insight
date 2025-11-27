@@ -1,6 +1,8 @@
-// src/features/candidates/components/CandidateTable.tsx
+import Link from "next/link";
 import type { CandidateListItem } from "@/core/models/Candidate";
 import type { OfferListItem } from "@/core/models/Offer";
+import { CandidateAvatar } from "./CandidateAvatar";
+import { CandidateStatusBadge } from "./CandidateStatusBadge";
 
 type Props = {
   candidates: CandidateListItem[];
@@ -9,7 +11,6 @@ type Props = {
 };
 
 export function CandidateTable({ candidates, onEditNote, offers }: Props) {
-
   return (
     <div className="border rounded-lg overflow-hidden">
       <table className="w-full text-sm">
@@ -35,34 +36,27 @@ export function CandidateTable({ candidates, onEditNote, offers }: Props) {
 
             return (
               <tr key={c.id} className="border-b last:border-0">
-                {/* Candidat : avatar + nom + email */}
                 <td className="px-4 py-6">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-700">
-                      {getInitials(c.fullName)}
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium text-slate-900">
-                        {c.fullName}
-                      </span>
-                      {c.email && (
-                        <span className="text-xs text-muted-foreground">
-                          {c.email}
+                  <Link href={`/candidates/${c.id}`}>
+                    <div className="flex items-center gap-3">
+                      <CandidateAvatar name={c.fullName} size="md" />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-900">
+                          {c.fullName}
                         </span>
-                      )}
+                        {c.email && (
+                          <span className="text-xs text-muted-foreground">
+                            {c.email}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 </td>
 
                 {/* Statut */}
                 <td className="px-4 py-6 align-middle">
-                  <span
-                    className={`inline-block rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ${getStatusClasses(
-                      c.status
-                    )}`}
-                  >
-                    {c.status || "—"}
-                  </span>
+                  <CandidateStatusBadge status={c.status} />
                 </td>
 
                 {/* Créé le */}
@@ -143,24 +137,3 @@ export function CandidateTable({ candidates, onEditNote, offers }: Props) {
   );
 }
 
-function getInitials(name: string) {
-  const parts = name.trim().split(" ").filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
-  return (parts[0]![0] + parts[1]![0]).toUpperCase();
-}
-
-function getStatusClasses(status: string | null) {
-  switch (status) {
-    case "new":
-      return "bg-emerald-50 text-emerald-700";
-    case "interview":
-      return "bg-violet-50 text-violet-700";
-    case "rejected":
-      return "bg-rose-50 text-rose-700";
-    case "hired":
-      return "bg-emerald-100 text-emerald-800";
-    default:
-      return "bg-slate-50 text-slate-700";
-  }
-}

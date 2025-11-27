@@ -1,7 +1,7 @@
-import type { SessionReader } from "../ports/SeesionReader";
-import type { OrgRepo } from "../ports/OrgRepo";
-import type { MembershipRepo } from "../ports/MembershipRepo";
-import type { Slugger } from "../ports/Slugger";
+import type { SessionReader } from "@/core/ports/SeesionReader";
+import type { OrgRepo } from "@/core/ports/OrgRepo";
+import type { MembershipRepo } from "@/core/ports/MembershipRepo";
+import type { Slugger } from "@/core/ports/Slugger";
 
 function sanitizeOrgName(name: string) {
   const n = (name || "").trim();
@@ -16,7 +16,6 @@ export function makeEnsureOrgOnFirstLogin(
     const userId = await deps.auth.currentUserId();
     if (!userId) throw new Error("not-authenticated");
 
-    // Déjà membre ? on ne fait rien
     if (await deps.memberships.hasAnyForUser(userId)) {
       return { created: false };
     }

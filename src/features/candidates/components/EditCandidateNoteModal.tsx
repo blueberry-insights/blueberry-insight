@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import type { CandidateListItem } from "@/core/models/Candidate";
 import { updateCandidateNoteAction } from "@/app/(app)/candidates/actions";
-import { FormSubmit } from "@/shared/ui/FormSubmit";
+import { FormSubmit } from "@/shared/ui/forms";
 
 type Props = {
   candidate: CandidateListItem | null;
@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function EditCandidateNoteModal({ candidate, onClose, onUpdated }: Props) {
-  // Initialise le state avec la valeur du candidat (sera reset via la clé du parent)
+
   const [note, setNote] = useState(() => candidate?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();

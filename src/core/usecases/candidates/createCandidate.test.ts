@@ -21,7 +21,9 @@ describe("makeCreateCandidate", () => {
     listByOrg: vi.fn(),
     create: vi.fn().mockResolvedValue(mockCandidate),
     updateNote: vi.fn(),
-  }); 
+    getById: vi.fn(),
+    attachCv: vi.fn(),
+  });
 
   it("should validate and create a candidate with minimal data", async () => {
     const mockRepo = createMockRepo();

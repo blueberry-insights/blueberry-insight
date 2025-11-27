@@ -71,7 +71,7 @@ export type Database = {
                     full_name: string;
                     email: string | null;
                     source: string | null;
-                    notes: string | null;
+                    note: string | null;
                     offer_id: string | null;
                     created_at: string;
                     updated_at: string | null;
@@ -89,10 +89,7 @@ export type Database = {
                     cv_mime_type: string | null;
                     cv_size_bytes: number | null;
                     cv_uploaded_at: string | null;
-
                     tags: string[] | null; // ou text[] selon ton SQL
-                    note: string | null;
-
                 };
                 Insert: {
                     id?: string;
@@ -101,7 +98,7 @@ export type Database = {
                     email?: string | null;
                     source?: string | null;
                     status?: string | null;
-                    notes?: string | null;
+                    note: string | null;
                     offer_id?: string | null;
                     created_at?: string;
                     updated_at?: string | null;
@@ -113,7 +110,7 @@ export type Database = {
                     email: string | null;
                     source: string | null;
                     status: string | null;
-                    notes: string | null;
+                    note: string | null;
                     offer_id: string | null;
                     created_at: string;
                     updated_at: string | null;

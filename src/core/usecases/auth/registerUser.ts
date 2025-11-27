@@ -1,7 +1,7 @@
-import type { AuthService } from "../ports/AuthService";
-import type { OrgRepo } from "../ports/OrgRepo";
-import type { MembershipRepo } from "../ports/MembershipRepo";
-import type { Slugger } from "../ports/Slugger";
+import type { AuthService } from "@/core/ports/AuthService";
+import type { OrgRepo } from "@/core/ports/OrgRepo";
+import type { MembershipRepo } from "@/core/ports/MembershipRepo";
+import type { Slugger } from "@/core/ports/Slugger";
 
 export type RegisterInput = {
   email: string;
@@ -45,7 +45,7 @@ export const makeRegisterUser = (
 
       userId = user.id;
 
-      // 2️⃣ Générer un slug unique pour l'organisation
+  
       const baseSlug = deps.slugger.slugify(input.orgName);
       const slug = await deps.slugger.uniquify(
         `${baseSlug}-${userId.slice(0, 8)}`,

@@ -1,16 +1,21 @@
-
+// src/shared/ui/AuthForm.tsx
 "use client";
 
 import * as React from "react";
 
-type GenericFormProps = {
+type AuthFormProps = {
   action?: React.ComponentProps<"form">["action"];
   onSubmit?: React.FormEventHandler<HTMLFormElement>;
   children: React.ReactNode;
   className?: string;
 };
 
-export function GenericForm({ action, onSubmit, children, className }: GenericFormProps) {
+export function AuthForm({
+  action,
+  onSubmit,
+  children,
+  className,
+}: AuthFormProps) {
   return (
     <form
       action={action}

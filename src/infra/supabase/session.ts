@@ -1,4 +1,4 @@
-// src/infra/supabase/session.ts
+
 import "server-only";
 import { redirect } from "next/navigation";
 import { supabaseServerRSC, supabaseServerAction } from "./client";
