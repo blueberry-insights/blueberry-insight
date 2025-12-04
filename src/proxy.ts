@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 const USER = process.env.BASIC_AUTH_USER;
 const PASS = process.env.BASIC_AUTH_PASS;
 
-export function middleware(req: NextRequest) {
+export function  proxy(req: NextRequest) {
   // Si pas de config → on laisse tout passer (pratique en local)
   if (!USER || !PASS) return NextResponse.next();
 

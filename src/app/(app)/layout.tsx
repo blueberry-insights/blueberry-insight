@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/shared/ui/layout";
 import { UserMenu, ButtonLogout } from "@/shared/ui/navigation";
 import { getSessionUser, getFirstMembership } from "@/infra/supabase/session";
+import { Toaster } from "@/components/ui/toaster";
 
 type UserMetadata = {
   full_name?: string;
@@ -52,6 +53,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       autoCollapseOnNavigate={false}
     >
       {children}
+      <Toaster />
     </AppShell>
   );
 }

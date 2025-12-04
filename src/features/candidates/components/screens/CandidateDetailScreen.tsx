@@ -5,38 +5,40 @@ import type { OfferListItem } from "@/core/models/Offer";
 import { uploadCandidateCvAction } from "@/app/(app)/candidates/[id]/actions";
 import { DetailTwoColumnLayout } from "@/shared/ui/layout";
 import { Button } from "@/components/ui/button";
-import { CandidateAvatar } from "./CandidateAvatar";
-import { CandidateStatusBadge } from "./CandidateStatusBadge";
+import { CandidateAvatar, CandidateStatusBadge } from "../ui";
 import {
   CandidateInfoSection,
   CandidateSkillsSection,
   CandidateCvSection,
   CandidateNotesSection,
   CandidateContextSection,
-} from "./sections";
+} from "../sections/details";
 
 
 type Props = {
   candidate: CandidateListItem;
   offer: OfferListItem | null;
-  onUploadCv: (
-    formData: FormData
-  ) => Promise<{ ok: boolean; candidate?: CandidateListItem; error?: string }>;
+
 };
 
-export function CandidateDetailScreen({ candidate, offer, onUploadCv }: Props) {
+export function CandidateDetailScreen({ 
+  candidate, 
+  offer, 
+}: Props) {
 
     const [currentCandidate, setCurrentCandidate] = useState(candidate);
     const [isPending, startTransition] = useTransition();
 
     async function handleUploadCv(formData: FormData) {
-        const result = await uploadCandidateCvAction(formData);
-        if (result.ok) {
-            setCurrentCandidate(result.candidate);
-          } else {
-            console.error("[handleUploadCv] error", result.error);
-          }
-      }
+        startTransition(async () => {
+            const result = await uploadCandidateCvAction(formData);
+            if (result.ok) {
+                setCurrentCandidate(result.candidate);
+            } else {
+                console.error("[handleUploadCv] error", result.error);
+            }
+        });
+    }
  
   const left = (
     <>

@@ -8,7 +8,7 @@ describe("makeCreateCandidate", () => {
   const mockCandidate: CandidateListItem = {
     id: "candidate-123",
     fullName: "John Doe",
-    email: "john@example.com",
+    email: "john@example.com", 
     status: "new",
     source: null,
     offerId: null,
@@ -21,8 +21,10 @@ describe("makeCreateCandidate", () => {
     listByOrg: vi.fn(),
     create: vi.fn().mockResolvedValue(mockCandidate),
     updateNote: vi.fn(),
+    update: vi.fn(),
     getById: vi.fn(),
     attachCv: vi.fn(),
+    deleteById: vi.fn(),
   });
 
   it("should validate and create a candidate with minimal data", async () => {

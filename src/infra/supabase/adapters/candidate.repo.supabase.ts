@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/infra/supabase/types/Database";
-import type { CandidateRepo, CreateCandidateInput } from "@/core/ports/CandidateRepo";
+import type { CandidateRepo, CreateCandidateInput , UpdateCandidateInput } from "@/core/ports/CandidateRepo";
 import type { CandidateListItem, CandidateStatus } from "@/core/models/Candidate";
 
 type Db = SupabaseClient<Database>;
@@ -25,7 +25,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         email: row.email,
         status: (row.status as CandidateStatus | null) ?? null,
         source: row.source ?? null,
-        tags: (row.tags as string[] | null) ?? [],
+        tags: row.tags ?? [],
         note: row.note ?? null,
         createdAt: row.created_at,
         cvPath: row.cv_path ?? null,
@@ -39,8 +39,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
       const { data, error } = await sb
         .from("candidates")
         .select(
-          `
-            id,
+          ` id,
             full_name,
             email,
             status,
@@ -76,11 +75,10 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         email: data.email,
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
-        tags: (data.tags as string[] | null) ?? [],
+        tags: data.tags ?? [],
         note: data.note ?? null,
         createdAt: data.created_at,
         offerId: data.offer_id ?? null,
-  
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
         cvMimeType: data.cv_mime_type ?? null,
@@ -113,7 +111,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         email: data.email,
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
-        tags: (data.tags as string[] | null) ?? [],
+        tags: data.tags ?? [],
         note: data.note ?? null,
         offerId: data.offer_id ?? null,
         createdAt: data.created_at,
@@ -144,7 +142,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
           email: email ?? null,
           status,
           source: source ?? null,
-          tags: tags && tags.length ? tags : null,
+          tags: tags ?? [],
           note: note ?? null,
           offer_id: offerId
         })
@@ -160,7 +158,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
         offerId: data.offer_id ?? null,
-        tags: (data.tags as string[] | null) ?? [],
+        tags: tags ?? [], 
         note: data.note ?? null,
         createdAt: data.created_at,
         cvPath: data.cv_path ?? null,
@@ -169,6 +167,71 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         cvSizeBytes: data.cv_size_bytes ?? null,
         cvUploadedAt: data.cv_uploaded_at ?? null,
       };
+    },
+    async update(input: UpdateCandidateInput): Promise<CandidateListItem> {
+      const {
+        orgId,
+        candidateId,
+        fullName,
+        email,
+        status,
+        source,
+        tags,
+        note,
+        offerId,
+      } = input;
+
+      const { data, error } = await sb
+        .from("candidates")
+        .update({
+          full_name: fullName,
+          email: email ?? null,
+          status,
+          source: source ?? null,
+          tags: tags ?? [],
+          note: note ?? null,
+          offer_id: offerId,
+        })
+        .eq("org_id", orgId)
+        .eq("id", candidateId)
+        .select(
+          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at",
+        )
+        .single();
+
+      if (error || !data) {
+        console.error("[CandidateRepo.update] error", error);
+        throw error ?? new Error("Update failed");
+      }
+
+      return {
+        id: data.id,
+        fullName: data.full_name,
+        email: data.email,
+        status: (data.status as CandidateStatus | null) ?? null,
+        source: data.source ?? null,
+        tags: tags ?? [], 
+        note: data.note ?? null,
+        offerId: data.offer_id ?? null,
+        createdAt: data.created_at,
+        cvPath: data.cv_path ?? null,
+        cvOriginalName: data.cv_original_name ?? null,
+        cvMimeType: data.cv_mime_type ?? null,
+        cvSizeBytes: data.cv_size_bytes ?? null,
+        cvUploadedAt: data.cv_uploaded_at ?? null,
+      };
+    },
+    async deleteById(input: { orgId: string; candidateId: string }): Promise<void> {
+      const { error } = await sb
+        .from("candidates")
+        .delete()
+        .eq("org_id", input.orgId)
+        .eq("id", input.candidateId);
+
+      if (error) {
+        console.error("[CandidateRepo.deleteById] error", error);
+        throw error;
+      }
     },
     async attachCv({
       orgId,
@@ -195,7 +258,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
           cv_mime_type: mimeType,
           cv_size_bytes: sizeBytes,
           cv_uploaded_at: uploadedAt,
-        } as any) // TS râlera car Insert/Update n'ont pas ces champs → à harmoniser plus tard
+        } as Record<string, unknown>) // TS râlera car Insert/Update n'ont pas ces champs → à harmoniser plus tard
         .eq("id", candidateId)
         .eq("org_id", orgId)
         .select(
@@ -211,7 +274,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         email: data.email,
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
-        tags: (data.tags as string[] | null) ?? [],
+        tags: data.tags ?? [],
         note: data.note ?? null,
         offerId: data.offer_id ?? null,
         createdAt: data.created_at,

@@ -9,14 +9,16 @@ type GenericFormProps = Omit<React.FormHTMLAttributes<HTMLFormElement>, "action"
   children: React.ReactNode;
   className?: string;
   encType?: "application/x-www-form-urlencoded" | "multipart/form-data";
+  id: string;
 };
 
 export function GenericForm({
+  id,
   action,
   onSubmit,
   children,
   className,
-  encType,
+  encType, 
   ...rest
 }: GenericFormProps) {
   const formAction = action as React.ComponentProps<"form">["action"];
@@ -28,6 +30,7 @@ export function GenericForm({
     action: formAction,
     onSubmit,
     className,
+    id,
     ...rest,
   };
 
@@ -35,5 +38,5 @@ export function GenericForm({
     formProps.encType = encType;
   }
 
-  return <form {...formProps}>{children}</form>;
+  return <form  id={id} {...formProps}>{children}</form>;
 }

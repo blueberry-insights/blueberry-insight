@@ -6,6 +6,7 @@ export const candidateStatusValues = [
   "offer",
   "hired",
   "archived",
+  "rejected",
 ] as const;
 
 export type CandidateStatus = (typeof candidateStatusValues)[number];
