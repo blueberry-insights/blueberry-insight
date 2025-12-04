@@ -3,8 +3,7 @@ import { notFound } from "next/navigation";
 import { requireUserAndOrgForPage } from "@/infra/supabase/session";
 import { makeCandidateRepo } from "@/infra/supabase/adapters/candidate.repo.supabase";
 import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
-import { uploadCandidateCvAction } from "./actions";
-import { CandidateDetailScreen } from "@/features/candidates/components/CandidateDetailScreen";
+import { CandidateDetailScreen } from "@/features/candidates/components";
 import { supabaseServerRSC } from "@/infra/supabase/client";
 
 type Props = {
@@ -28,6 +27,5 @@ export default async function CandidateDetailPage({ params }: Props) {
     offer = offers.find((o) => o.id === candidate.offerId) ?? null;
   }
 
-
-return (<CandidateDetailScreen candidate={candidate} offer={offer} onUploadCv={uploadCandidateCvAction} />);
+  return <CandidateDetailScreen candidate={candidate} offer={offer} />;
 }

@@ -52,7 +52,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
             <form action={resendSignupEmail} className="inline-block">
               <input type="hidden" name="email" value={email} />
               <button className="hover:underline text-muted-foreground" type="submit">
-                Renvoyer l'email
+                Renvoyer l&apos;email
               </button>
             </form>
           ) : (
@@ -65,7 +65,7 @@ export default async function VerifyPage({ searchParams }: VerifyPageProps) {
                 className="mr-2 rounded border border-gray-300 px-2 py-1 text-sm"
               />
               <button className="hover:underline text-muted-foreground" type="submit">
-                Renvoyer l'email
+                Renvoyer l&apos;email
               </button>
             </form>
           )}

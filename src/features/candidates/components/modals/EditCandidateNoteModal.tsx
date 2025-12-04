@@ -1,23 +1,33 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import type { CandidateListItem } from "@/core/models/Candidate";
 import { updateCandidateNoteAction } from "@/app/(app)/candidates/actions";
 import { FormSubmit } from "@/shared/ui/forms";
+import { useToast } from "@/shared/hooks/useToast";
 
 type Props = {
+  open: boolean;
   candidate: CandidateListItem | null;
   onClose: () => void;
   onUpdated: (c: CandidateListItem) => void;
 };
 
-export function EditCandidateNoteModal({ candidate, onClose, onUpdated }: Props) {
-
+export function EditCandidateNoteModal({ open, candidate, onClose, onUpdated }: Props) {
   const [note, setNote] = useState(() => candidate?.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { toast } = useToast();
 
-  if (!candidate) return null;
+  // Mettre à jour la note quand le candidat change
+  useEffect(() => {
+    if (candidate) {
+      setNote(candidate.note ?? "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candidate?.id]);
+
+  if (!open || !candidate) return null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,10 +41,19 @@ export function EditCandidateNoteModal({ candidate, onClose, onUpdated }: Props)
 
       const res = await updateCandidateNoteAction(form);
       if (!res.ok) {
-        setError(res.error ?? "Erreur lors de la mise à jour");
+        const errorMessage = res.error ?? "Erreur lors de la mise à jour";
+        setError(errorMessage);
+        toast.error({
+          title: "Erreur de mise à jour",
+          description: errorMessage,
+        });
         return;
       }
 
+      toast.success({
+        title: "Note mise à jour",
+        description: `La note pour ${candidate.fullName} a été mise à jour avec succès.`,
+      });
       onUpdated(res.candidate);
     });
   }

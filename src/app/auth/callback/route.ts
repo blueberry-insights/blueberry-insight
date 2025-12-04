@@ -66,7 +66,6 @@ export async function GET(req: Request) {
   if (code) {
     try {
       await auth.exchangeCodeForSession(code);
-      console.log("[auth/callback] Code exchanged successfully");
     } catch (e) {
       console.error("[auth/callback] exchangeCodeForSession failed:", e);
 

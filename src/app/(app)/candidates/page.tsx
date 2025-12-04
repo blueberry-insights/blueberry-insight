@@ -2,7 +2,7 @@
 import { requireUserAndOrgForPage } from "@/infra/supabase/session";
 import { supabaseServerRSC } from "@/infra/supabase/client";
 import { makeCandidateRepo } from "@/infra/supabase/adapters/candidate.repo.supabase";
-import { CandidatesScreen } from "@/features/candidates/components/CandidatesScreen";
+import { CandidatesScreen } from "@/features/candidates/components";
 import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
 
 export default async function CandidatesPage() {

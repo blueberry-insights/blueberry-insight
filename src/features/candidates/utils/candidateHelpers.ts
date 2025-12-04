@@ -32,6 +32,8 @@ export function getStatusClasses(status: string | null): string {
       return "bg-emerald-100 text-emerald-800 border-emerald-300";
     case "archived":
       return "bg-slate-50 text-slate-600 border-slate-200";
+    case "rejected":  
+      return "bg-red-50 text-red-700 border-red-200";
     default:
       return "bg-slate-50 text-slate-700 border-slate-200";
   }

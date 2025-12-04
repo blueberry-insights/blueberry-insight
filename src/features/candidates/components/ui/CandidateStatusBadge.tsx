@@ -1,4 +1,4 @@
-import { getStatusClasses } from "../utils/candidateHelpers";
+import { getStatusClasses } from "@/features/candidates/utils/candidateHelpers";
 
 type Props = {
   status: string | null;

@@ -75,7 +75,7 @@ export default function ResetConfirmPage() {
       }
 
       router.push("/login?reset=success");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[ResetConfirm] unexpected error:", err);
       setGlobalError("Erreur inattendue. Réessaie plus tard.");
       setPending(false);

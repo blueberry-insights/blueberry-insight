@@ -2,7 +2,7 @@ import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
 import { supabaseServerRSC } from "@/infra/supabase/client";
 import { requireUserAndOrgForPage } from "@/infra/supabase/session";
 
-import { OffersScreen } from "@/features/offers/components/OffersScreen";
+import { OffersScreen } from "@/features/offers/components/screens/OffersScreen";
 
 export default async function OffersPage() {
   const { orgId } = await requireUserAndOrgForPage("/offers");

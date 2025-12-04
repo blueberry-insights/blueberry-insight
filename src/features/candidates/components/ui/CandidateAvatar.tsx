@@ -1,4 +1,4 @@
-import { getInitials } from "../utils/candidateHelpers";
+import { getInitials } from "@/features/candidates/utils/candidateHelpers";
 
 type Props = {
   name: string;

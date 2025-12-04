@@ -19,7 +19,18 @@ export const CandidateSchema = z.object({
     .max(120, "La source est trop longue")
     .optional()
     .nullable(),
-  tags: z.array(z.string().trim()).default([]),
+    tags: z
+    .preprocess((val) => {
+      if (val == null) return [];
+      if (Array.isArray(val)) return val;
+      if (typeof val === "string") {
+        const trimmed = val.trim();
+        if (!trimmed) return [];
+        return [trimmed];
+      }
+      return [];
+    }, z.array(z.string().trim()))
+    .default([]),
   note: z
     .string()
     .trim()
@@ -42,7 +53,7 @@ export function makeCreateCandidate(repo: CandidateRepo) {
       email: parsed.email ?? null,
       status: parsed.status,
       source: parsed.source ?? null,
-      tags: parsed.tags?.filter((tag) => tag.length > 0),
+      tags: parsed.tags, 
       note: parsed.note ?? null,
       offerId: parsed.offerId ?? null,
     };

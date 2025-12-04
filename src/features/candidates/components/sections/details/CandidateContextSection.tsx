@@ -1,6 +1,6 @@
 import type { CandidateListItem } from "@/core/models/Candidate";
 import type { OfferListItem } from "@/core/models/Offer";
-import { CandidateStatusBadge } from "../CandidateStatusBadge";
+import { CandidateStatusBadge } from "@/features/candidates/components/ui";
 
 type Props = {
   candidate: CandidateListItem;
