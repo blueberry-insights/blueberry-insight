@@ -1,4 +1,4 @@
-import type { OrgRole, OrgMember } from "@/core/models/OrgInvitation";
+import type { OrgRole, OrgMember } from "@/core/models/Membership";
 
 export interface MembershipRepo {
   hasAnyForUser(userId: string): Promise<boolean>;

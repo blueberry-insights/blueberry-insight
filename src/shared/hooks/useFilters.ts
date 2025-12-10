@@ -7,11 +7,11 @@ export type BaseFilterState<T extends Record<string, unknown> = Record<string, u
   sortBy: SortBy;
 };
 
-type FilterConfig<T> = {
+type FilterConfig<T extends Record<string, unknown>> = {
   initialState: BaseFilterState<T>;
 };
 
-type FilterOptions<T, Item> = {
+type FilterOptions<T extends Record<string, unknown>, Item> = {
   searchFields?: (item: Item) => string[];
   customFilters?: (item: Item, filters: BaseFilterState<T>) => boolean;
   sortGetter?: (item: Item) => string;

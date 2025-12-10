@@ -14,6 +14,7 @@ type TextFieldProps = {
   autoComplete?: string;
   error?: string;
   withPasswordToggle?: boolean;
+  disabled?: boolean;
 };
 
 export function TextField({
@@ -26,6 +27,7 @@ export function TextField({
   autoComplete,
   error,
   withPasswordToggle = false,
+  disabled = false,
 }: TextFieldProps) {
   const [show, setShow] = useState(false);
 
@@ -54,6 +56,7 @@ export function TextField({
           autoComplete={autoComplete}
           aria-invalid={!!error}
           className={withPasswordToggle && isPassword ? "pr-10" : undefined}
+          disabled={disabled}
         />
 
         {withPasswordToggle && isPassword && (
