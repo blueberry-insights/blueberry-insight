@@ -33,6 +33,9 @@ export function CreateOfferModal({ open, onClose, onCreated }: Props) {
     city: "",
     isRemote: false,
     contractType: null as (typeof CONTRACT_TYPES)[number] | null,
+    salaryMin: "",
+    salaryMax: "",
+    currency: "",
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +60,9 @@ export function CreateOfferModal({ open, onClose, onCreated }: Props) {
       form.set("title", values.title.trim());
       form.set("description", values.description.trim());
       form.set("status", values.status);
+      form.set("salaryMin", values.salaryMin ?? "");
+      form.set("salaryMax", values.salaryMax ?? "");
+      form.set("currency", values.currency ?? "");  
 
       if (values.city.trim()) {
         form.set("city", values.city.trim());
@@ -85,6 +91,9 @@ export function CreateOfferModal({ open, onClose, onCreated }: Props) {
         city: "",
         isRemote: false,
         contractType: null,
+        salaryMin: "",
+        salaryMax: "",
+        currency: "",
       });
     });
   }
@@ -104,7 +113,6 @@ export function CreateOfferModal({ open, onClose, onCreated }: Props) {
           >
             Annuler
           </button>
-          {/* 🔥 Ce bouton déclenche bien le form ci-dessous */}
           <FormSubmit
             className="flex-1"
             form="create-offer-form"
@@ -119,7 +127,6 @@ export function CreateOfferModal({ open, onClose, onCreated }: Props) {
         onSubmit={handleSubmit}
         className="space-y-6"
       >
-        {/* Bloc 1 : Informations principales */}
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Informations principales
@@ -235,6 +242,29 @@ export function CreateOfferModal({ open, onClose, onCreated }: Props) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <TextField
+              name="salaryMin"
+              label="Salaire minimum"
+              placeholder="Ex : 100000"
+              value={values.salaryMin}
+              onChange={(v) => set("salaryMin", v)}
+            />
+            <TextField
+              name="salaryMax"
+              label="Salaire maximum"
+              placeholder="Ex : 150000"
+              value={values.salaryMax}
+              onChange={(v) => set("salaryMax", v)}
+            />
+            <TextField
+              name="currency"
+              label="Devise"
+              placeholder="Ex : EUR"
+              value={values.currency ?? ""}
+              onChange={(v) => set("currency", v)}
+            />
           </div>
         </section>
 

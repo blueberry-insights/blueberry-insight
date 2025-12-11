@@ -40,8 +40,6 @@ export function makeOfferRepo(sb: Db): OfferRepo {
         .order("created_at", { ascending: false });
     
       if (error) throw error;
-      
-      // Récupérer tous les userId uniques (created_by + responsible_user_id)
       const userIds = Array.from(
         new Set(
           (data ?? [])
@@ -50,8 +48,6 @@ export function makeOfferRepo(sb: Db): OfferRepo {
         )
       );
 
-      // Paralléliser les appels avec Promise.all pour optimiser les performances
-      // Utiliser le client admin pour accéder aux données utilisateurs
       const userNames = new Map<string, string>();
       const adminClient = supabaseAdmin();
       
@@ -83,17 +79,11 @@ export function makeOfferRepo(sb: Db): OfferRepo {
         salaryMin: row.salary_min ?? null,
         salaryMax: row.salary_max ?? null,
         currency: row.currency ?? null,
-
         createdBy: row.created_by ?? null,
-        createdByName: row.created_by
-          ? userNames.get(row.created_by) ?? null
-          : null,
-
         responsibleUserId: row.responsible_user_id ?? null,
         responsibleUserName: row.responsible_user_id
           ? userNames.get(row.responsible_user_id) ?? null
           : null,
-
         candidateCount: row.candidates?.[0]?.count ?? 0,
       }));
     },

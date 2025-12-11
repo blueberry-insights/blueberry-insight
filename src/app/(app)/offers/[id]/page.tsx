@@ -20,10 +20,8 @@ export default async function OfferDetailPage({ params }: Props) {
   if (!offer) {
     notFound();
   }
- // Récupérer tous les candidats de l'organisation
   const allCandidates = await candidateRepo.listByOrg(orgId);
   
-
   const associatedCandidates = allCandidates.filter(
     (c) => c.offerId === offer.id
   );

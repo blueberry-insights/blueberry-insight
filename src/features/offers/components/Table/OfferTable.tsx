@@ -50,7 +50,6 @@ export function OfferTable({
                 key={o.id}
                 className="border-b last:border-0 hover:bg-slate-50/60 transition-colors"
               >
-                {/* Offre = titre + localisation + contrat */}
                 <td className="px-4 py-3 align-top">
                   <Link
                     href={`/offers/${o.id}`}

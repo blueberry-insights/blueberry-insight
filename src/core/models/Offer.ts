@@ -19,7 +19,6 @@ export type Offer = {
   updatedAt: string | null;
   description: string | null;
   status: OfferStatus;
-  // Gestion des responsabilités
   createdBy: string | null; // User qui a créé l'offre (audit, jamais modifié)
   responsibleUserId: string | null; // User responsable de l'offre (modifiable)
 };
@@ -41,7 +40,6 @@ export type OfferListItem = {
   currency: string | null;
   candidateCount: number;
   createdBy: string | null; // User ID du créateur
-  createdByName: string | null; // Nom complet du créateur
   responsibleUserId: string | null; // User ID du responsable
   responsibleUserName: string | null; // Nom complet du responsable
 };

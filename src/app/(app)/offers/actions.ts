@@ -37,7 +37,6 @@ export async function createOfferAction(
         ? Number(formData.get("salaryMax"))
         : null,
       currency: formData.get("currency") || null,
-      // Le user connecté est à la fois créateur et responsable de l'offre
       createdBy: ctx.userId,
       responsibleUserId: ctx.userId,
     };
@@ -48,7 +47,6 @@ export async function createOfferAction(
     try {
       const offer = await createOffer(raw);
       
-      // Récupérer le nom de l'utilisateur créateur/responsable
       let userName: string | null = null;
       if (ctx.userId) {
         try {
@@ -76,9 +74,8 @@ export async function createOfferAction(
         salaryMax: offer.salaryMax,
         currency: offer.currency,
         createdBy: offer.createdBy,
-        createdByName: userName,
         responsibleUserId: offer.responsibleUserId,
-        responsibleUserName: userName, // Même personne au départ
+        responsibleUserName: userName,
         candidateCount: 0,
       };
       return { ok: true, offer: offerListItem };
@@ -133,7 +130,7 @@ export async function updateOfferAction(
       
       // Récupérer les noms des utilisateurs en parallèle (optimisation)
       const adminClient = supabaseAdmin();
-      const [responsibleUserName, createdByName] = await Promise.all([
+      const [responsibleUserName] = await Promise.all([
         // Récupérer le nom du responsable
         fullOffer.responsibleUserId
           ? adminClient.auth.admin
@@ -179,7 +176,6 @@ export async function updateOfferAction(
         salaryMax: fullOffer.salaryMax,
         currency: fullOffer.currency,
         createdBy: fullOffer.createdBy,
-        createdByName,
         responsibleUserId: fullOffer.responsibleUserId,
         responsibleUserName,
         candidateCount: 0,

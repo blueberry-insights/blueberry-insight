@@ -129,7 +129,6 @@ export function OfferDetailScreen({ offer: initialOffer, candidates }: Props) {
           ...offer,
           candidateCount: candidates.length,
           updatedAt: offer.updatedAt ?? offer.createdAt,
-          createdByName: null,
           responsibleUserName: null,
         }}
         onUpdated={(updatedOffer) => {

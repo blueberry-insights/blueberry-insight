@@ -22,7 +22,13 @@ type Props = {
   onUpdated: (offer: OfferListItem) => void;
 };
 
-const CONTRACT_TYPES = ["CDI", "CDD", "Freelance", "Stage", "Alternance"] as const;
+const CONTRACT_TYPES = [
+  "CDI",
+  "CDD",
+  "Freelance",
+  "Stage",
+  "Alternance",
+] as const;
 
 const INITIAL_VALUES = {
   title: "",
@@ -31,14 +37,12 @@ const INITIAL_VALUES = {
   city: "",
   isRemote: false,
   contractType: null as (typeof CONTRACT_TYPES)[number] | null,
+  salaryMin: "",
+  salaryMax: "",
+  currency: "",
 };
 
-export function UpdateOfferModal({
-  open,
-  onClose,
-  offer,
-  onUpdated,
-}: Props) {
+export function UpdateOfferModal({ open, onClose, offer, onUpdated }: Props) {
   const [values, setValues] = useState(INITIAL_VALUES);
   const [error, setError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -65,7 +69,11 @@ export function UpdateOfferModal({
       status: normalizedStatus,
       city: offer.city ?? "",
       isRemote: offer.isRemote ?? false,
-      contractType: (offer.contractType as (typeof CONTRACT_TYPES)[number] | null) ?? null,
+      contractType:
+        (offer.contractType as (typeof CONTRACT_TYPES)[number] | null) ?? null,
+      salaryMin: offer.salaryMin != null ? String(offer.salaryMin) : "",
+      salaryMax: offer.salaryMax != null ? String(offer.salaryMax) : "",
+      currency: offer.currency ?? "",
     });
     setError(null);
     setIsInitialized(true);
@@ -107,6 +115,10 @@ export function UpdateOfferModal({
       if (values.contractType) {
         form.set("contractType", values.contractType);
       }
+      
+      form.set("salaryMin", values.salaryMin);
+      form.set("salaryMax", values.salaryMax);
+      form.set("currency", values.currency);
 
       const res = await updateOfferAction(form);
       if (!res.ok) {
@@ -126,7 +138,6 @@ export function UpdateOfferModal({
       });
       onUpdated(updatedOffer);
       onClose();
-  
     });
   }
 
@@ -201,13 +212,12 @@ export function UpdateOfferModal({
               )}
               <p className="text-[10px] text-slate-400">
                 <span className="font-medium">draft</span> = interne,{" "}
-                <span className="font-medium">published</span> = activement ouverte.
+                <span className="font-medium">published</span> = activement
+                ouverte.
               </p>
             </div>
           </div>
         </section>
-
-        {/* Bloc 2 : Contexte & localisation */}
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Contexte & localisation
@@ -249,13 +259,15 @@ export function UpdateOfferModal({
                 >
                   <span
                     className={`block h-3 w-3 rounded-full bg-white shadow transition translate-y-[2px] ${
-                      values.isRemote ? "translate-x-[18px]" : "translate-x-[2px]"
+                      values.isRemote
+                        ? "translate-x-[18px]"
+                        : "translate-x-[2px]"
                     }`}
                   />
                 </span>
               </button>
               <p className="text-[10px] text-slate-400">
-                Tu pourras préciser la policy plus tard (jours sur site, fuseau, etc.).
+                (jours sur site, fuseau, etc.).
               </p>
             </div>
 
@@ -268,7 +280,10 @@ export function UpdateOfferModal({
                   key={`contractType-${offer.id}`}
                   value={values.contractType ?? undefined}
                   onValueChange={(v) =>
-                    set("contractType", v as (typeof CONTRACT_TYPES)[number] | null)
+                    set(
+                      "contractType",
+                      v as (typeof CONTRACT_TYPES)[number] | null
+                    )
                   }
                 >
                   <SelectTrigger className="h-9 w-full rounded-lg border border-slate-200 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60">
@@ -286,10 +301,32 @@ export function UpdateOfferModal({
                 <div className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 animate-pulse" />
               )}
             </div>
+         
           </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <TextField
+                name="salaryMin"
+                label="Salaire minimum"
+                placeholder="Ex : 100000"
+                value={values.salaryMin ?? ""}
+                onChange={(v) => set("salaryMin", v)}
+              />
+              <TextField
+                name="salaryMax"
+                label="Salaire maximum"
+                placeholder="Ex : 150000"
+                value={values.salaryMax ?? ""}
+                onChange={(v) => set("salaryMax", v)}
+              />
+              <TextField
+                name="currency"
+                label="Devise"
+                placeholder="Ex : EUR"
+                value={values.currency ?? ""}
+                onChange={(v) => set("currency", v)}
+              />
+            </div>
         </section>
-
-        {/* Bloc 3 : Description */}
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Description
@@ -308,8 +345,8 @@ export function UpdateOfferModal({
               placeholder="Contexte, missions clés, stack, équipe, reporting…"
             />
             <p className="text-[10px] text-slate-400">
-              Reste synthétique : l&apos;objectif est de qualifier les bons candidats, pas
-              d&apos;écrire la fiche de poste complète.
+              Reste synthétique : l&apos;objectif est de qualifier les bons
+              candidats, pas d&apos;écrire la fiche de poste complète.
             </p>
           </div>
         </section>

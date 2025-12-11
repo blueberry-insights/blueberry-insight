@@ -12,6 +12,17 @@ describe("makeCreateOffer", () => {
     description: "Great opportunity",
     status: "draft",
     createdAt: "2024-01-01T00:00:00Z",
+    city: "Paris",
+    country: "France",
+    isRemote: false,
+    remotePolicy: "hybrid",
+    contractType: "CDI",
+    salaryMin: 100000,
+    salaryMax: 150000,
+    currency: "EUR",
+    createdBy: "123e4567-e89b-12d3-a456-426614174000",
+    responsibleUserId: "123e4567-e89b-12d3-a456-426614174000",
+    updatedAt: "2024-01-01T00:00:00Z",
   };
 
   const createMockRepo = (): OfferRepo => ({
@@ -19,6 +30,7 @@ describe("makeCreateOffer", () => {
     getById: vi.fn(),
     create: vi.fn().mockResolvedValue(mockOffer),
     update: vi.fn(),
+    deleteById: vi.fn(),
   });
 
   it("should validate and create an offer with minimal data", async () => {
@@ -48,6 +60,16 @@ describe("makeCreateOffer", () => {
       title: "Senior Developer",
       description: "Great opportunity for experienced developers",
       status: "published",
+      city: "Paris",
+      country: "France",
+      isRemote: false,
+      remotePolicy: "hybrid",
+      contractType: "CDI",
+      salaryMin: 100000,
+      salaryMax: 150000,
+      currency: "EUR",
+      createdBy: "123e4567-e89b-12d3-a456-426614174000",
+      responsibleUserId: "123e4567-e89b-12d3-a456-426614174000",
     });
 
     expect(mockRepo.create).toHaveBeenCalledWith({
@@ -55,6 +77,16 @@ describe("makeCreateOffer", () => {
       title: "Senior Developer",
       description: "Great opportunity for experienced developers",
       status: "published",
+      city: "Paris",
+      country: "France",
+      isRemote: false,
+      remotePolicy: "hybrid",
+      contractType: "CDI",
+      salaryMin: 100000,
+      salaryMax: 150000,
+      currency: "EUR",
+      createdBy: "123e4567-e89b-12d3-a456-426614174000",
+      responsibleUserId: "123e4567-e89b-12d3-a456-426614174000",
     });
     expect(result).toEqual(mockOffer);
   });
