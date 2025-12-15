@@ -48,7 +48,7 @@ export function EditCandidateNoteModal({
 
     startTransition(async () => {
       const form = new FormData();
-      form.set("id", candidate.id);
+      form.set("id", candidate?.id ?? "");
       form.set("note", note);
 
       const res = await updateCandidateNoteAction(form);
