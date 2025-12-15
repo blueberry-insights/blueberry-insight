@@ -85,7 +85,7 @@ export function OfferTable({
 
                 {/* Date de mise à jour */}
                 <td className="px-4 py-3 align-top text-slate-500 text-xs">
-                  {new Date(o.updatedAt ?? o.createdAt).toLocaleDateString(
+                  {new Date(o.updatedAt ?? o.createdAt ?? new Date()).toLocaleDateString(
                     "fr-FR",
                     { day: "2-digit", month: "short", year: "numeric" }
                   )}

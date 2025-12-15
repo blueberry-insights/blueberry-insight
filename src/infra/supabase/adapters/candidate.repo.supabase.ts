@@ -1,7 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/infra/supabase/types/Database";
-import type { CandidateRepo, CreateCandidateInput , UpdateCandidateInput } from "@/core/ports/CandidateRepo";
-import type { CandidateListItem, CandidateStatus } from "@/core/models/Candidate";
+import type {
+  CandidateRepo,
+  CreateCandidateInput,
+  UpdateCandidateInput,
+} from "@/core/ports/CandidateRepo";
+import type {
+  CandidateListItem,
+  CandidateStatus,
+} from "@/core/models/Candidate";
 
 type Db = SupabaseClient<Database>;
 
@@ -11,7 +18,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
       const { data, error } = await sb
         .from("candidates")
         .select(
-          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at", 
+          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
         )
         .eq("org_id", orgId)
         .order("created_at", { ascending: false });
@@ -27,7 +34,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         source: row.source ?? null,
         tags: row.tags ?? [],
         note: row.note ?? null,
-        createdAt: row.created_at,
+        createdAt: row.created_at ?? new Date().toISOString(),
         cvPath: row.cv_path ?? null,
         cvOriginalName: row.cv_original_name ?? null,
         cvMimeType: row.cv_mime_type ?? null,
@@ -35,7 +42,10 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         cvUploadedAt: row.cv_uploaded_at ?? null,
       }));
     },
-    async getById(orgId: string, candidateId: string): Promise<CandidateListItem | null> {
+    async getById(
+      orgId: string,
+      candidateId: string
+    ): Promise<CandidateListItem | null> {
       const { data, error } = await sb
         .from("candidates")
         .select(
@@ -58,17 +68,16 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         .eq("org_id", orgId)
         .eq("id", candidateId)
         .single();
-    
+
       if (error) {
         if (error.code === "PGRST116") {
- 
           return null;
         }
         throw error;
       }
-    
+
       if (!data) return null;
-    
+
       return {
         id: data.id,
         fullName: data.full_name,
@@ -77,7 +86,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         source: data.source ?? null,
         tags: data.tags ?? [],
         note: data.note ?? null,
-        createdAt: data.created_at,
+        createdAt: data.created_at ?? new Date().toISOString(),
         offerId: data.offer_id ?? null,
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
@@ -85,7 +94,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         cvSizeBytes: data.cv_size_bytes ?? null,
         cvUploadedAt: data.cv_uploaded_at ?? null,
       };
-    },    
+    },
     async updateNote({
       orgId,
       candidateId,
@@ -100,7 +109,9 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         .update({ note: note })
         .eq("id", candidateId)
         .eq("org_id", orgId)
-        .select("id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at")
+        .select(
+          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
+        )
         .single();
 
       if (error || !data) throw error ?? new Error("Update failed");
@@ -114,7 +125,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         tags: data.tags ?? [],
         note: data.note ?? null,
         offerId: data.offer_id ?? null,
-        createdAt: data.created_at,
+        createdAt: data.created_at ?? new Date().toISOString(),
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
         cvMimeType: data.cv_mime_type ?? null,
@@ -132,21 +143,29 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         source,
         tags,
         note,
-        offerId
+        offerId,
       } = input;
+
+      const emailValue = (email ?? "").trim();
+      if (!emailValue) {
+        throw new Error("Email requis");
+      }
+
       const { data, error } = await sb
         .from("candidates")
         .insert({
           org_id: orgId,
           full_name: fullName,
-          email: email ?? null,
-          status,
+          email: emailValue,
           source: source ?? null,
           tags: tags ?? [],
           note: note ?? null,
-          offer_id: offerId
+          offer_id: offerId ?? null,
+          status: status ?? "new",
         })
-        .select("id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at")
+        .select(
+          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
+        )
         .single();
 
       if (error || !data) throw error ?? new Error("Insert failed");
@@ -158,9 +177,9 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
         offerId: data.offer_id ?? null,
-        tags: tags ?? [], 
+        tags: tags ?? [],
         note: data.note ?? null,
-        createdAt: data.created_at,
+        createdAt: data.created_at ?? new Date().toISOString(),
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
         cvMimeType: data.cv_mime_type ?? null,
@@ -181,11 +200,16 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         offerId,
       } = input;
 
+      const emailValue = (email ?? "").trim();
+      if (!emailValue) {
+        throw new Error("Email requis");
+      }
+
       const { data, error } = await sb
         .from("candidates")
         .update({
           full_name: fullName,
-          email: email ?? null,
+          email: emailValue,
           status,
           source: source ?? null,
           tags: tags ?? [],
@@ -195,7 +219,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         .eq("org_id", orgId)
         .eq("id", candidateId)
         .select(
-          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at",
+          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
         )
         .single();
 
@@ -210,10 +234,10 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         email: data.email,
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
-        tags: tags ?? [], 
+        tags: tags ?? [],
         note: data.note ?? null,
         offerId: data.offer_id ?? null,
-        createdAt: data.created_at,
+        createdAt: data.created_at ?? new Date().toISOString(),
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
         cvMimeType: data.cv_mime_type ?? null,
@@ -221,7 +245,10 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         cvUploadedAt: data.cv_uploaded_at ?? null,
       };
     },
-    async deleteById(input: { orgId: string; candidateId: string }): Promise<void> {
+    async deleteById(input: {
+      orgId: string;
+      candidateId: string;
+    }): Promise<void> {
       const { error } = await sb
         .from("candidates")
         .delete()
@@ -265,9 +292,9 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
           "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
         )
         .single();
-    
+
       if (error || !data) throw error ?? new Error("Attach CV failed");
-    
+
       return {
         id: data.id,
         fullName: data.full_name,
@@ -277,13 +304,13 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         tags: data.tags ?? [],
         note: data.note ?? null,
         offerId: data.offer_id ?? null,
-        createdAt: data.created_at,
+        createdAt: data.created_at ?? new Date().toISOString(),
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
         cvMimeType: data.cv_mime_type ?? null,
         cvSizeBytes: data.cv_size_bytes ?? null,
         cvUploadedAt: data.cv_uploaded_at ?? null,
       };
-    }    
+    },
   };
 }

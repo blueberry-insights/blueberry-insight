@@ -15,7 +15,7 @@ export type Offer = {
   salaryMin: number | null;
   salaryMax: number | null;
   currency: string | null;
-  createdAt: string;
+  createdAt: string | null;
   updatedAt: string | null;
   description: string | null;
   status: OfferStatus;
@@ -27,7 +27,7 @@ export type OfferListItem = {
   id: string;
   title: string;
   description: string | null;
-  createdAt: string;
+  createdAt: string | null;
   updatedAt: string | null;
   status: OfferStatus;
   city: string | null;

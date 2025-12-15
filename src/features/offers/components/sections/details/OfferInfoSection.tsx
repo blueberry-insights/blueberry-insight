@@ -40,14 +40,12 @@ export function OfferInfoSection({ offer }: Props) {
         />
         <InfoRow
           label="Créée le"
-          value={new Date(offer.createdAt).toLocaleDateString("fr-FR")}
+          value={offer.createdAt ? new Date(offer.createdAt).toLocaleDateString("fr-FR") : "Non précisé"}
         />
-        {offer.updatedAt && (
           <InfoRow
             label="Mise à jour le"
-            value={new Date(offer.updatedAt).toLocaleDateString("fr-FR")}
+            value={offer.updatedAt ? new Date(offer.updatedAt).toLocaleDateString("fr-FR") : "Non précisé"}
           />
-        )}
       </div>
     </section>
   );
