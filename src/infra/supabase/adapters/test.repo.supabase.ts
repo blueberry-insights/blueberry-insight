@@ -53,8 +53,25 @@ export function makeTestRepo(supabase: Db): TestRepo {
         })),
       };
     },
-    async listTestsByOrg() {
-        throw new Error("Not implemented");
+    async listTestsByOrg(orgId: string): Promise<Test[]> {
+      const { data, error } = await supabase
+        .from("tests")
+        .select("*")
+        .eq("org_id", orgId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return (data ?? []).map((t): Test => ({
+        id: t.id,
+        orgId: t.org_id,
+        name: t.name,
+        type: t.type as TestType,
+        description: t.description,
+        isActive: t.is_active,
+        createdBy: t.created_by,
+        createdAt: t.created_at,
+      }));
       },
       async getTestById() {
         throw new Error("Not implemented");

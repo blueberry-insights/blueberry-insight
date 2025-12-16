@@ -4,6 +4,7 @@ export type CreateTestFlowInput = {
   orgId: string;
   offerId: string;
   name?: string;
+  createdBy: string 
 };
 
 export type AddFlowItemInput =

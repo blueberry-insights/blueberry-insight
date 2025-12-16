@@ -1,7 +1,7 @@
 // infra/supabase/adapters/testFlow.repo.supabase.ts
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/Database";
-import type { TestFlowRepo } from "@/core/ports/TestFlowRepo";
+import type { TestFlowRepo, AddFlowItemInput, CreateTestFlowInput } from "@/core/ports/TestFlowRepo";
 import type { TestFlow, TestFlowItem } from "@/core/models/TestFlow";
 
 type Db = SupabaseClient<Database>;
@@ -59,20 +59,92 @@ export function makeTestFlowRepo(
         })),
       };
     },
-    async createFlow() {
-        throw new Error("Not implemented");
-      },
-  
-      async addItem() {
-        throw new Error("Not implemented");
-      },
-  
-      async reorderItems() {
-        throw new Error("Not implemented");
-      },
-  
-      async deleteItem() {
-        throw new Error("Not implemented");
-      },
+    async addItem(input: AddFlowItemInput): Promise<TestFlowItem> {
+      const base = {
+        org_id: input.orgId,
+        flow_id: input.flowId,
+        order_index: input.orderIndex,
+        kind: input.kind,
+        title: input.title ?? null,
+        description: input.description ?? null,
+        is_required: input.isRequired ?? true,
+      };
+
+      const payload =
+        input.kind === "video"
+          ? { ...base, video_url: input.videoUrl, test_id: null }
+          : { ...base, test_id: input.testId, video_url: null };
+
+      const { data, error } = await supabase
+        .from("test_flow_items")
+        .insert(payload)
+        .select("*")
+        .single();
+
+      if (error || !data) throw error ?? new Error("Insert failed");
+
+      return {
+        id: data.id,
+        orgId: data.org_id,
+        flowId: data.flow_id,
+        orderIndex: data.order_index,
+        kind: mapFlowItemKind(data.kind),
+        testId: data.test_id ?? undefined,
+        videoUrl: data.video_url ?? undefined,
+        title: data.title ?? null,
+        description: data.description ?? null,
+        isRequired: data.is_required ?? null,
+        createdAt: data.created_at ?? null,
+      };
+    },
+
+    async deleteItem({ orgId, itemId }) {
+      const { error } = await supabase
+        .from("test_flow_items")
+        .delete()
+        .eq("org_id", orgId)
+        .eq("id", itemId);
+
+      if (error) throw error;
+    },
+
+    async reorderItems({ orgId, flowId, items }) {
+      for (const it of items) {
+        const { error } = await supabase
+          .from("test_flow_items")
+          .update({ order_index: it.orderIndex })
+          .eq("org_id", orgId)
+          .eq("flow_id", flowId)
+          .eq("id", it.id);
+
+        if (error) throw error;
+      }
+    },
+
+    async createFlow(input: CreateTestFlowInput) {
+      const { data, error } = await supabase
+        .from("test_flows")
+        .insert({
+          org_id: input.orgId,
+          offer_id: input.offerId,
+          name: input.name ?? "Parcours par défaut",
+          is_active: true,
+          created_by: input.createdBy,
+        })
+        .select("*")
+        .single();
+
+      if (error || !data) throw error ?? new Error("Create flow failed");
+
+      return {
+        id: data.id,
+        orgId: data.org_id,
+        offerId: data.offer_id,
+        name: data.name,
+        createdAt: data.created_at,
+      };
+    },
   };
 }
+
+

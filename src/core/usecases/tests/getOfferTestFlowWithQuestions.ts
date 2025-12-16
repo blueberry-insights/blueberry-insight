@@ -1,16 +1,14 @@
-import { z } from "zod";
-import type { TestFlowRepo } from "@/core/ports/TestFlowRepo";
-import type { TestRepo } from "@/core/ports/TestRepo";
+import { TestFlowItem } from "@/core/models/TestFlow";
+import { TestFlowRepo } from "@/core/ports/TestFlowRepo";
+import { TestRepo } from "@/core/ports/TestRepo";
+import z from "zod";
 
 const InputSchema = z.object({
   orgId: z.string().uuid(),
   offerId: z.string().uuid(),
 });
 
-export function makeGetOfferTestFlowWithQuestions(
-  flowRepo: TestFlowRepo,
-  testRepo: TestRepo
-) {
+export function makeGetOfferTestFlowWithQuestions(flowRepo: TestFlowRepo, testRepo: TestRepo) {
   return async (raw: unknown) => {
     const parsed = InputSchema.parse(raw);
 
@@ -22,7 +20,7 @@ export function makeGetOfferTestFlowWithQuestions(
     if (!data) return null;
 
     const items = await Promise.all(
-      data.items.map(async (item) => {
+      data.items.map(async (item: TestFlowItem) => {
         if (item.kind !== "test" || !item.testId) return item;
 
         const payload = await testRepo.getTestWithQuestions(
