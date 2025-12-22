@@ -68,6 +68,7 @@ export function AppShell({
           <div className="flex h-14 items-center px-3">
             <Link href="/" className="flex items-center gap-2 min-w-0">
               <div className="relative h-10 w-10 flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="/logo.png"
                   alt="Blueberry Insight"

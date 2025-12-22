@@ -121,17 +121,13 @@ export async function updateOfferAction(
     try {
       const offer = await updateOffer(raw);
       
-      // Récupérer l'offre complète avec tous les champs
       const fullOffer = await repo.getById(ctx.orgId, offer.id);
       
       if (!fullOffer) {
         return { ok: false, error: "Offre introuvable après mise à jour" };
       }
-      
-      // Récupérer les noms des utilisateurs en parallèle (optimisation)
       const adminClient = supabaseAdmin();
       const [responsibleUserName] = await Promise.all([
-        // Récupérer le nom du responsable
         fullOffer.responsibleUserId
           ? adminClient.auth.admin
               .getUserById(fullOffer.responsibleUserId)
@@ -146,7 +142,6 @@ export async function updateOfferAction(
                 return null;
               })
           : Promise.resolve(null),
-        // Récupérer le nom du créateur
         fullOffer.createdBy
           ? adminClient.auth.admin
               .getUserById(fullOffer.createdBy)

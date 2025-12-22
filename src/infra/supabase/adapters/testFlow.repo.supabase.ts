@@ -44,6 +44,8 @@ export function makeTestFlowRepo(
           offerId: flow.offer_id,
           name: flow.name,
           createdAt: flow.created_at,
+          createdBy: flow.created_by,
+          isActive: flow.is_active,
         },
         items: (items ?? []).map((item): TestFlowItem => ({
           id: item.id,
@@ -121,14 +123,13 @@ export function makeTestFlowRepo(
       }
     },
 
-    async createFlow(input: CreateTestFlowInput) {
+    async createFlow(input: CreateTestFlowInput): Promise<TestFlow> {
       const { data, error } = await supabase
         .from("test_flows")
         .insert({
           org_id: input.orgId,
           offer_id: input.offerId,
           name: input.name ?? "Parcours par défaut",
-          is_active: true,
           created_by: input.createdBy,
         })
         .select("*")
@@ -141,9 +142,22 @@ export function makeTestFlowRepo(
         orgId: data.org_id,
         offerId: data.offer_id,
         name: data.name,
-        createdAt: data.created_at,
+        createdAt: data.created_at ?? new Date().toISOString(),
+        createdBy: data.created_by,
+        isActive: true,
       };
     },
+    async countItemsUsingTest(testId: string, orgId: string) {
+      const { count, error } = await supabase
+        .from('test_flow_items')
+        .select('id', { head: true, count: 'exact' })
+        .eq('org_id', orgId)
+        .eq('test_id', testId);
+    
+      if (error) throw error;
+      return count ?? 0;
+    }
+    
   };
 }
 

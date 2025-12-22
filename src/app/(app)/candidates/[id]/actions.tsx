@@ -4,6 +4,7 @@ import type { CandidateListItem } from "@/core/models/Candidate";
 import { withAuth } from "@/infra/supabase/session";
 import { makeCandidateRepo } from "@/infra/supabase/adapters/candidate.repo.supabase";
 import { makeAttachCandidateCv } from "@/core/usecases/candidates/uploadCandidatCv";
+import { makeUpdateCandidate } from "@/core/usecases/candidates/updateCandidate";
 
 type Ok = { ok: true; candidate: CandidateListItem };
 type Err = { ok: false; error: string };
@@ -61,6 +62,48 @@ export async function uploadCandidateCvAction(formData: FormData): Promise<Uploa
     } catch (e) {
       console.error("[uploadCandidateCvAction] attachCv error", e);
       return { ok: false, error: "Impossible d'attacher le CV au candidat" };
+    }
+  });
+}
+
+export async function updateCandidateAction(formData: FormData): Promise<Ok | Err> {
+  return withAuth(async (ctx): Promise<Ok | Err> => {
+    const candidateId = String(formData.get("id") ?? "");
+    const offerIdRaw = formData.get("offerId");
+    const offerId = offerIdRaw === "none" || offerIdRaw === "" ? null : String(offerIdRaw ?? "");
+
+    if (!candidateId) {
+      return { ok: false, error: "Candidat manquant" };
+    }
+
+    const repo = makeCandidateRepo(ctx.sb);
+    
+    // Récupérer le candidat actuel pour préserver les autres champs
+    const currentCandidate = await repo.getById(ctx.orgId, candidateId);
+    
+    if (!currentCandidate) {
+      return { ok: false, error: "Candidat introuvable" };
+    }
+
+    const updateCandidate = makeUpdateCandidate(repo);
+
+    try {
+      const candidate = await updateCandidate({
+        orgId: ctx.orgId,
+        candidateId,
+        fullName: currentCandidate.fullName,
+        email: currentCandidate.email ?? null,
+        status: currentCandidate.status ?? undefined,
+        source: currentCandidate.source ?? null,
+        tags: currentCandidate.tags ?? [],
+        note: currentCandidate.note ?? null,
+        offerId: offerId,
+      });
+
+      return { ok: true, candidate };
+    } catch (e) {
+      console.error("[updateCandidateAction] updateCandidate error", e);
+      return { ok: false, error: "Impossible de mettre à jour le candidat" };
     }
   });
 }

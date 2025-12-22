@@ -71,11 +71,6 @@ export function CreateCandidateModal({
       return;
     }
 
-    if (!cvFile) {
-      setCvError("Le CV est obligatoire");
-      return;
-    }
-
     startTransition(async () => {
       const form = new FormData();
       form.set("orgId", orgId);
@@ -86,7 +81,6 @@ export function CreateCandidateModal({
       form.set("tags", values.tags.trim());
       form.set("note", values.note.trim());
       form.set("offerId", values.offerId);
-
       const res = await createCandidateAction(form);
       if (!res.ok) {
         const errorMessage = res.error ?? "Erreur lors de la création";
@@ -98,30 +92,42 @@ export function CreateCandidateModal({
         return;
       }
 
-      const createdCandidate = res.candidate;
+      const createdCandidate = res.candidate as CandidateListItem;
 
-      const cvForm = new FormData();
-      cvForm.set("candidateId", createdCandidate.id);
-      cvForm.set("cv", cvFile);
+      // Si un CV est fourni -> on tente l'upload comme avant
+      if (cvFile) {
+        const cvForm = new FormData();
+        cvForm.set("candidateId", createdCandidate.id);
+        cvForm.set("cv", cvFile);
 
-      const uploadRes = await uploadCandidateCvAction(cvForm);
+        const uploadRes = await uploadCandidateCvAction(cvForm);
 
-      if (!uploadRes.ok) {
-        toast.warning({
+        if (!uploadRes.ok) {
+          toast.warning({
+            title: "Candidat créé",
+            description:
+              "Le candidat a été créé, mais l'upload du CV a échoué. vous pourrez téléverser le CV depuis sa fiche.",
+          });
+          onCreated(createdCandidate);
+          onClose();
+          return;
+        }
+
+        toast.success({
           title: "Candidat créé",
-          description:
-            "Le candidat a été créé, mais l'upload du CV a échoué. Vous pourrez téléverser le CV depuis sa fiche.",
+          description: `${createdCandidate.fullName} a été ajouté avec succès (CV inclus).`,
         });
-        onCreated(createdCandidate);
+        onCreated(uploadRes.candidate as CandidateListItem);
         onClose();
         return;
       }
 
+      // Pas de CV → on ne bloque pas
       toast.success({
         title: "Candidat créé",
-        description: `${createdCandidate.fullName} a été ajouté avec succès.`,
+        description: `${createdCandidate.fullName} a été ajouté sans CV. Vous pourrez ajouter le CV plus tard depuis sa fiche.`,
       });
-      onCreated(uploadRes.candidate);
+      onCreated(createdCandidate);
       onClose();
     });
   }
@@ -156,7 +162,7 @@ export function CreateCandidateModal({
         onSubmit={handleSubmit}
         className="space-y-6"
       >
-        {/* Bloc 1 : CV obligatoire */}
+        {/* Bloc 1 : CV (recommandé, plus obligatoire) */}
         <section className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             CV du candidat
@@ -164,7 +170,7 @@ export function CreateCandidateModal({
 
           <div className="space-y-1">
             <label className="block text-xs font-medium text-slate-700">
-              CV <span className="text-red-500">*</span>
+              CV <span className="text-slate-400 text-[11px]">(optionnel)</span>
             </label>
             <div className="flex flex-col gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50/60 px-3 py-3">
               <input
@@ -180,12 +186,10 @@ export function CreateCandidateModal({
                   <span className="font-medium">{cvFile.name}</span>
                 </p>
               )}
-              {cvError && (
-                <p className="text-[11px] text-red-600">{cvError}</p>
-              )}
+              {cvError && <p className="text-[11px] text-red-600">{cvError}</p>}
               <p className="text-[10px] text-slate-400">
-                Format PDF uniquement. Le CV sera stocké de manière sécurisée dans
-                l&apos;espace de ton organisation.
+                Format PDF recommandé. Si tu n&apos;as pas le CV sous la main,
+                tu pourras l&apos;ajouter plus tard depuis la fiche candidat.
               </p>
             </div>
           </div>
@@ -229,7 +233,7 @@ export function CreateCandidateModal({
                 <SelectTrigger className="h-9 w-full rounded-lg border border-slate-200 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100]">
                   {candidateStatusValues.map((s) => (
                     <SelectItem key={s} value={s}>
                       {s}
@@ -251,7 +255,7 @@ export function CreateCandidateModal({
                 <SelectTrigger className="h-9 w-full rounded-lg border border-slate-200 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60">
                   <SelectValue placeholder="Aucune" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100]">
                   <SelectItem value="none">Aucune</SelectItem>
                   {offers.map((o) => (
                     <SelectItem key={o.id} value={o.id}>
@@ -311,7 +315,8 @@ export function CreateCandidateModal({
               onChange={(e) => set("note", e.target.value)}
             />
             <p className="text-[10px] text-slate-400">
-              Notes visibles uniquement par ton équipe : contexte, doutes, next steps…
+              Notes visibles uniquement par ton équipe : contexte, doutes, next
+              steps…
             </p>
           </div>
         </section>

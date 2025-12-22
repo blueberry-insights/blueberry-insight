@@ -2,6 +2,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useId } from "react";
 
 type AppModalProps = {
   open: boolean;
@@ -10,6 +11,9 @@ type AppModalProps = {
   children: ReactNode;
   footer?: ReactNode;
   width?: "sm" | "md" | "lg";
+  closeOnOverlayClick?: boolean;
+  closeOnEscape?: boolean;
+  isBusy?: boolean;
 };
 
 export function AppModal({
@@ -19,7 +23,12 @@ export function AppModal({
   children,
   footer,
   width = "md",
+  closeOnOverlayClick = true,
+  closeOnEscape = true,
+  isBusy = false,
 }: AppModalProps) {
+  const titleId = useId();
+
   if (!open) return null;
 
   const maxWidth =
@@ -29,28 +38,50 @@ export function AppModal({
       ? "max-w-3xl"
       : "max-w-2xl";
 
+  function requestClose() {
+    if (isBusy) return;
+    onClose();
+  }
+
+  function handleOverlayClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (!closeOnOverlayClick) return;
+    if (isBusy) return;
+    // clic sur l’overlay uniquement
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  }
+  
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (!closeOnEscape) return;
+    if (e.key === "Escape") requestClose();
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
       aria-modal="true"
       role="dialog"
-      aria-labelledby="app-modal-title"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
+      onClick={handleOverlayClick}
     >
       <div
         className={`w-full ${maxWidth} rounded-2xl bg-white shadow-2xl border border-slate-100 p-6 animate-in fade-in zoom-in duration-150`}
       >
         {/* HEADER */}
         <div className="flex items-start justify-between mb-6">
-          <h2
-            id="app-modal-title"
-            className="text-lg font-semibold text-slate-900"
-          >
+          <h2 id={titleId} className="text-lg font-semibold text-slate-900">
             {title}
           </h2>
+
           <button
             type="button"
-            onClick={onClose}
-            className="text-xs text-slate-500 hover:text-slate-700 hover:underline"
+            onClick={requestClose}
+            disabled={isBusy}
+            className="text-xs text-slate-500 hover:text-slate-700 hover:underline disabled:opacity-60"
           >
             Fermer
           </button>

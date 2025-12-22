@@ -8,7 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { OfferListItem } from "@/core/models/Offer";
-import { Eye, MoreHorizontal, Pencil, Trash } from "lucide-react";
+import { Beaker, Eye, MoreHorizontal, Pencil, Trash } from "lucide-react";
 import { OfferStatusBadge } from "../ui";
 
 type Props = {
@@ -18,11 +18,7 @@ type Props = {
   onDeleteRequest: (offer: OfferListItem) => void;
 };
 
-export function OfferTable({
-  offers,
-  onEditRequest,
-  onDeleteRequest,
-}: Props) {
+export function OfferTable({ offers, onEditRequest, onDeleteRequest }: Props) {
   return (
     <div className="rounded-lg border bg-white overflow-hidden shadow-sm">
       <table className="w-full text-sm">
@@ -85,10 +81,13 @@ export function OfferTable({
 
                 {/* Date de mise à jour */}
                 <td className="px-4 py-3 align-top text-slate-500 text-xs">
-                  {new Date(o.updatedAt ?? o.createdAt ?? new Date()).toLocaleDateString(
-                    "fr-FR",
-                    { day: "2-digit", month: "short", year: "numeric" }
-                  )}
+                  {new Date(
+                    o.updatedAt ?? o.createdAt ?? new Date()
+                  ).toLocaleDateString("fr-FR", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}
                 </td>
 
                 <td className="px-4 py-3 align-top text-right">
@@ -109,14 +108,23 @@ export function OfferTable({
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => onEditRequest(o)}>
                         <Pencil className="mr-2 h-4 w-4" />
-                        Éditer
+                        Éditer l&apos;offre
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-red-600 focus:text-red-700"
                         onSelect={() => onDeleteRequest(o)}
                       >
                         <Trash className="mr-2 h-4 w-4" />
-                        Supprimer
+                        Supprimer l&apos;offre
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link
+                          href={`/offers/${o.id}/tests`}
+                          className="flex items-center gap-2 text-sm text-slate-700"
+                        >
+                          <Beaker className="h-4 w-4 text-slate-500" />
+                          <span>Configurer le parcours de tests</span>
+                        </Link>
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

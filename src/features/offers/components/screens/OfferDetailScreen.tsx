@@ -91,7 +91,6 @@ export function OfferDetailScreen({ offer: initialOffer, candidates }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <header className="flex flex-col gap-4 rounded-xl border bg-white px-5 py-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">

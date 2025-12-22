@@ -11,11 +11,18 @@ export default async function DashboardPage() {
   const displayName = meta.full_name || user?.email?.split("@")[0] || "Utilisateur";
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Welcome Back, {displayName} !</h1>
+    <div>
+    <h1 className="text-xl font-semibold mb-4">Bienvenue, {displayName} !</h1>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div className="rounded-xl border bg-card p-4 text-muted-foreground">
-        Dashboard à venir…
+       <h1 className="text-lg font-semibold">Pipeline de candidats</h1>
+       <p className="text-sm text-muted-foreground"> A venir…</p>
       </div>
+      <div className="rounded-xl border bg-card p-4 text-muted-foreground"> 
+        <h1 className="text-lg font-semibold">Test passés</h1>
+        <p className="text-sm text-muted-foreground"> A venir…</p>
+      </div>
+    </div>
     </div>
   );
 }

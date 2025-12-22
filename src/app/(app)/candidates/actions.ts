@@ -136,7 +136,6 @@ export async function updateCandidateStatusAction(
     const candidateId = String(formData.get("id") ?? "");
     const status = String(formData.get("status") ?? "").trim() || null;
 
-    // Récupérer le candidat actuel pour préserver les autres champs
     const repo = makeCandidateRepo(ctx.sb);
     const currentCandidate = await repo.getById(ctx.orgId, candidateId);
 

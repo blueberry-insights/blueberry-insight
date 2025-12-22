@@ -13,7 +13,7 @@ export function CandidateNotesSection({ candidate }: Props) {
         </h2>
       </div>
       {candidate.note ? (
-        <p className="whitespace-pre-wrap text-sm text-slate-800">
+        <p className="whitespace-pre-wrap  wrap-break-word text-sm text-slate-800">
           {candidate.note}
         </p>
       ) : (

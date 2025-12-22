@@ -33,7 +33,7 @@ export async function requireUserAndOrgForPage(redirectToOnFail: string) {
 
   const { data, error } = await sb
     .from("user_organizations")
-    .select("org_id")
+    .select("org_id, role")
     .eq("user_id", user.id)
     .limit(1)
     .maybeSingle();
@@ -48,6 +48,7 @@ export async function requireUserAndOrgForPage(redirectToOnFail: string) {
     user,
     userId: user.id,
     orgId: data.org_id as string,
+    role: data.role as string,
   };
 }
 
@@ -67,7 +68,7 @@ export async function requireUserAndOrgForAction() {
 
   const { data, error } = await sb
     .from("user_organizations")
-    .select("org_id")
+    .select("org_id, role")
     .eq("user_id", user.id)
     .limit(1)
     .maybeSingle();
@@ -83,6 +84,7 @@ export async function requireUserAndOrgForAction() {
     user,
     userId: user.id,
     orgId: data.org_id as string,
+    role: data.role as string,
   };
 }
 

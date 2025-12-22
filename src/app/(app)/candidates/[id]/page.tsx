@@ -22,10 +22,11 @@ export default async function CandidateDetailPage({ params }: Props) {
   }
 
   let offer = null;
+  let offers = null;
   if (candidate.offerId) {
-    const offers = await offerRepo.listByOrg(orgId);
+    offers = await offerRepo.listByOrg(orgId);
     offer = offers.find((o) => o.id === candidate.offerId) ?? null;
   }
 
-  return <CandidateDetailScreen candidate={candidate} offer={offer} />;
+  return <CandidateDetailScreen candidate={candidate} allOffers={offers ?? null} offer={offer} />;
 }

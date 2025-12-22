@@ -2,6 +2,7 @@
 
 import type { CandidateListItem } from "@/core/models/Candidate";
 import type { OfferListItem } from "@/core/models/Offer";
+import { AppModal } from "@/shared/ui/AppModal";
 
 type Props = {
   open: boolean;
@@ -28,11 +29,7 @@ export function DeleteCandidateModal({
       : "l'offre associée";
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6">
-        <h2 className="mb-2 text-sm font-semibold text-slate-900">
-          Supprimer ce candidat ?
-        </h2>
+    <AppModal open={open} onClose={onClose} isBusy={isSubmitting} title="Supprimer ce candidat ?">
         <p className="mb-4 text-sm text-slate-600">
           Vous êtes sur le point de supprimer{" "}
           <span className="font-semibold">{candidate.fullName}</span>{" "}
@@ -60,7 +57,6 @@ export function DeleteCandidateModal({
             {isSubmitting ? "Suppression..." : "Supprimer le candidat"}
           </button>
         </div>
-      </div>
-    </div>
+      </AppModal>
   );
 }

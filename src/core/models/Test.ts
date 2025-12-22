@@ -16,7 +16,7 @@ export interface Test {
   description?: string | null;
   isActive: boolean;
   createdBy: string;
-  createdAt: string; // ISO date
+  createdAt: string; // IS
 }
 
 export interface TestQuestion {
@@ -97,6 +97,7 @@ export interface CreateTestInput {
   name: string;
   type: TestType;
   description?: string | null;
+  isActive: boolean;
   createdBy: string;
 }
 
@@ -108,6 +109,16 @@ export interface UpdateTestInput {
   isActive?: boolean;
 }
 
+export interface DeleteTestInput {
+  testId: string;
+  orgId: string;
+}
+
+export interface ArchiveTestInput {
+  testId: string;
+  orgId: string;
+}
+
 export interface CreateQuestionInput {
   orgId: string;
   testId: string;
@@ -117,6 +128,17 @@ export interface CreateQuestionInput {
   maxValue?: number;
   options?: string[];
   orderIndex?: number;
+  isRequired?: boolean;
+}
+
+export interface UpdateQuestionInput {
+  orgId: string;
+  questionId: string;
+  label: string;
+  kind: TestQuestionKind;
+  minValue?: number | null;
+  maxValue?: number | null;
+  options?: string[] | null;
   isRequired?: boolean;
 }
 

@@ -1,15 +1,48 @@
+// app/(app)/offers/[id]/tests/actions.ts
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { withAuth } from "@/infra/supabase/session";
 import { makeTestFlowRepo } from "@/infra/supabase/adapters/testFlow.repo.supabase";
-import { TestFlowItem } from "@/core/models/TestFlow";
+import type { TestFlowItem } from "@/core/models/TestFlow";
 
-type AddFlowItemOk = { ok: true; data: TestFlowItem };
-type DeleteOk = { ok: true; data: null };
 type Err = { ok: false; error: string };
+type Ok<T> = { ok: true; data: T };
 
-export async function addFlowVideoItemAction(formData: FormData): Promise<AddFlowItemOk | Err> {
+export async function createFlowForOfferAction(
+  formData: FormData
+): Promise<Ok<{ id: string }> | Err> {
+  return withAuth(async (ctx) => {
+    try {
+      const offerId = String(formData.get("offerId") ?? "").trim();
+      if (!offerId) {
+        return { ok: false, error: "offerId manquant" };
+      }
+
+      const repo = makeTestFlowRepo(ctx.sb);
+      const flow = await repo.createFlow({
+        orgId: ctx.orgId,
+        offerId,
+        name: `Parcours de tests pour ${offerId}`,
+        isActive: true,
+        createdBy: ctx.userId,
+      });
+
+      revalidatePath(`/offers/${offerId}/tests`);
+      return { ok: true, data: { id: flow.id } };
+    } catch (e) {
+      console.error("[createFlowForOfferAction]", e);
+      return { ok: false, error: "Erreur lors de la création du parcours" };
+    }
+  });
+}
+
+type AddFlowItemOk = Ok<TestFlowItem>;
+type DeleteOk = Ok<null>;
+
+export async function addFlowVideoItemAction(
+  formData: FormData
+): Promise<AddFlowItemOk | Err> {
   return withAuth(async (ctx) => {
     try {
       const raw = {
@@ -25,7 +58,10 @@ export async function addFlowVideoItemAction(formData: FormData): Promise<AddFlo
       };
 
       if (!raw.offerId || !raw.flowId || !raw.videoUrl) {
-        return { ok: false, error: "Champs manquants (flowId, offerId, videoUrl)" };
+        return {
+          ok: false,
+          error: "Champs manquants (flowId, offerId, videoUrl)",
+        };
       }
 
       const repo = makeTestFlowRepo(ctx.sb);
@@ -35,12 +71,17 @@ export async function addFlowVideoItemAction(formData: FormData): Promise<AddFlo
       return { ok: true, data: created };
     } catch (e) {
       console.error("[addFlowVideoItemAction]", e);
-      return { ok: false, error: "Erreur lors de l'ajout du bloc vidéo" };
+      return {
+        ok: false,
+        error: "Erreur lors de l'ajout du bloc vidéo",
+      };
     }
   });
 }
 
-export async function addFlowTestItemAction(formData: FormData): Promise<AddFlowItemOk | Err> {
+export async function addFlowTestItemAction(
+  formData: FormData
+): Promise<AddFlowItemOk | Err> {
   return withAuth(async (ctx) => {
     try {
       const raw = {
@@ -56,7 +97,10 @@ export async function addFlowTestItemAction(formData: FormData): Promise<AddFlow
       };
 
       if (!raw.offerId || !raw.flowId || !raw.testId) {
-        return { ok: false, error: "Champs manquants (flowId, offerId, testId)" };
+        return {
+          ok: false,
+          error: "Champs manquants (flowId, offerId, testId)",
+        };
       }
 
       const repo = makeTestFlowRepo(ctx.sb);
@@ -66,20 +110,26 @@ export async function addFlowTestItemAction(formData: FormData): Promise<AddFlow
       return { ok: true, data: created };
     } catch (e) {
       console.error("[addFlowTestItemAction]", e);
-      return { ok: false, error: "Erreur lors de l'ajout du bloc test" };
+      return {
+        ok: false,
+        error: "Erreur lors de l'ajout du bloc test",
+      };
     }
   });
 }
-
-
-export async function deleteFlowItemAction(formData: FormData): Promise<DeleteOk | Err> {
+export async function deleteFlowItemAction(
+  formData: FormData
+): Promise<DeleteOk | Err> {
   return withAuth(async (ctx) => {
     try {
       const offerId = String(formData.get("offerId") ?? "").trim();
       const itemId = String(formData.get("itemId") ?? "").trim();
 
       if (!offerId || !itemId) {
-        return { ok: false, error: "Champs manquants (offerId, itemId)" };
+        return {
+          ok: false,
+          error: "Champs manquants (offerId, itemId)",
+        };
       }
 
       const repo = makeTestFlowRepo(ctx.sb);
@@ -89,7 +139,10 @@ export async function deleteFlowItemAction(formData: FormData): Promise<DeleteOk
       return { ok: true, data: null };
     } catch (e) {
       console.error("[deleteFlowItemAction]", e);
-      return { ok: false, error: "Erreur lors de la suppression du bloc" };
+      return {
+        ok: false,
+        error: "Erreur lors de la suppression du bloc",
+      };
     }
   });
 }

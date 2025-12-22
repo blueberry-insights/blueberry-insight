@@ -8,7 +8,8 @@ export interface TestFlow {
   offerId: string;
   createdAt: string;
   name: string;
-
+  isActive: boolean;
+  createdBy: string;
 }
 
 export type TestFlowItem = {

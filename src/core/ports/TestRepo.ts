@@ -13,6 +13,9 @@ import type {
     StartTestSubmissionInput,
     SubmitTestAnswersInput,
     CreateTestReviewInput,
+    UpdateQuestionInput,
+    ArchiveTestInput,
+    DeleteTestInput,
   } from "../models/Test";
   
   export interface TestRepo {
@@ -24,8 +27,8 @@ import type {
     getTestById(id: string, orgId: string): Promise<Test | null>;
     createTest(input: CreateTestInput): Promise<Test>;
     updateTest(input: UpdateTestInput): Promise<Test>;
-    archiveTest(id: string, orgId: string): Promise<void>;
-
+    archiveTest(input: ArchiveTestInput): Promise<void>;
+    deleteTest(input: DeleteTestInput): Promise<void>;
     getTestWithQuestions(
       testId: string,
       orgId: string
@@ -35,15 +38,8 @@ import type {
     // QUESTIONS
     // ---------------------------------------------------------------------------
     addQuestion(input: CreateQuestionInput): Promise<TestQuestion>;
-    updateQuestion(input: {
-      id: string;
-      orgId: string;
-      label?: string;
-      minValue?: number;
-      maxValue?: number;
-      options?: string[];
-      isRequired?: boolean;
-    }): Promise<TestQuestion>;
+    updateQuestion(input: UpdateQuestionInput): Promise<TestQuestion>;
+
     reorderQuestions(input: ReorderQuestionsInput): Promise<void>;
     deleteQuestion(questionId: string, orgId: string): Promise<void>;
     startSubmission(

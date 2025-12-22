@@ -42,11 +42,16 @@ export interface TestFlowRepo {
     offerId: string;
   }): Promise<{ flow: TestFlow; items: TestFlowItem[] } | null>;
 
-  createFlow(input: CreateTestFlowInput): Promise<TestFlow>;
-
+  createFlow(input: {
+    orgId: string;
+    offerId: string;
+    name: string;
+    isActive: boolean;
+    createdBy: string;
+  }): Promise<TestFlow>;
   addItem(input: AddFlowItemInput): Promise<TestFlowItem>;
-
   reorderItems(input: ReorderFlowItemsInput): Promise<void>;
-
   deleteItem(input: { orgId: string; itemId: string }): Promise<void>;
+  countItemsUsingTest(testId: string, orgId: string): Promise<number>;
+
 }
