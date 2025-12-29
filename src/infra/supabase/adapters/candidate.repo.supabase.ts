@@ -18,7 +18,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
       const { data, error } = await sb
         .from("candidates")
         .select(
-          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
+          "id, full_name, email, phone, location, candidate_ref, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
         )
         .eq("org_id", orgId)
         .order("created_at", { ascending: false });
@@ -30,6 +30,9 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         fullName: row.full_name,
         offerId: row.offer_id ?? null,
         email: row.email,
+        phone: row.phone ?? null,
+        location: row.location ?? null,
+        candidateRef: row.candidate_ref,
         status: (row.status as CandidateStatus | null) ?? null,
         source: row.source ?? null,
         tags: row.tags ?? [],
@@ -52,6 +55,9 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
           ` id,
             full_name,
             email,
+            phone,
+            location,
+            candidate_ref,
             status,
             source,
             tags,
@@ -82,11 +88,14 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         id: data.id,
         fullName: data.full_name,
         email: data.email,
+        phone: data.phone ?? null,
+        location: data.location ?? null,
+        candidateRef: data.candidate_ref,
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
         tags: data.tags ?? [],
         note: data.note ?? null,
-        createdAt: data.created_at ?? new Date().toISOString(),
+        createdAt: data.created_at,
         offerId: data.offer_id ?? null,
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
@@ -110,7 +119,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         .eq("id", candidateId)
         .eq("org_id", orgId)
         .select(
-          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
+          "id, full_name, email, status, phone, location, candidate_ref, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
         )
         .single();
 
@@ -120,12 +129,15 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         id: data.id,
         fullName: data.full_name,
         email: data.email,
+        phone: data.phone ?? null,
+        location: data.location ?? null,
+        candidateRef: data.candidate_ref,
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
         tags: data.tags ?? [],
         note: data.note ?? null,
         offerId: data.offer_id ?? null,
-        createdAt: data.created_at ?? new Date().toISOString(),
+        createdAt: data.created_at,
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
         cvMimeType: data.cv_mime_type ?? null,
@@ -139,6 +151,8 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         orgId,
         fullName,
         email,
+        phone,
+        location,
         status = "new",
         source,
         tags,
@@ -146,17 +160,15 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         offerId,
       } = input;
 
-      const emailValue = (email ?? "").trim();
-      if (!emailValue) {
-        throw new Error("Email requis");
-      }
-
+  
       const { data, error } = await sb
         .from("candidates")
         .insert({
           org_id: orgId,
           full_name: fullName,
-          email: emailValue,
+          email: email,
+          phone: phone ?? null,
+          location: location ?? null,
           source: source ?? null,
           tags: tags ?? [],
           note: note ?? null,
@@ -164,7 +176,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
           status: status ?? "new",
         })
         .select(
-          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
+          "id, full_name, email, phone, location, candidate_ref, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
         )
         .single();
 
@@ -174,12 +186,15 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         id: data.id,
         fullName: data.full_name,
         email: data.email,
+        phone: data.phone ?? null,
+        location: data.location ?? null,
+        candidateRef: data.candidate_ref,
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
         offerId: data.offer_id ?? null,
         tags: tags ?? [],
         note: data.note ?? null,
-        createdAt: data.created_at ?? new Date().toISOString(),
+        createdAt: data.created_at,
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
         cvMimeType: data.cv_mime_type ?? null,
@@ -193,6 +208,8 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         candidateId,
         fullName,
         email,
+        phone,
+        location,
         status,
         source,
         tags,
@@ -200,16 +217,13 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         offerId,
       } = input;
 
-      const emailValue = (email ?? "").trim();
-      if (!emailValue) {
-        throw new Error("Email requis");
-      }
-
       const { data, error } = await sb
         .from("candidates")
         .update({
           full_name: fullName,
-          email: emailValue,
+          email: email,  
+          phone: phone ?? null,
+          location: location ?? null,
           status,
           source: source ?? null,
           tags: tags ?? [],
@@ -219,7 +233,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         .eq("org_id", orgId)
         .eq("id", candidateId)
         .select(
-          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
+          "id, full_name, email, phone, location, candidate_ref, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
         )
         .single();
 
@@ -232,12 +246,15 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         id: data.id,
         fullName: data.full_name,
         email: data.email,
+        phone: data.phone ?? null,
+        location: data.location ?? null,
+        candidateRef: data.candidate_ref,
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
         tags: tags ?? [],
         note: data.note ?? null,
         offerId: data.offer_id ?? null,
-        createdAt: data.created_at ?? new Date().toISOString(),
+        createdAt: data.created_at,
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
         cvMimeType: data.cv_mime_type ?? null,
@@ -289,7 +306,7 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         .eq("id", candidateId)
         .eq("org_id", orgId)
         .select(
-          "id, full_name, email, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
+          "id, full_name, email, phone, location, candidate_ref, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
         )
         .single();
 
@@ -299,12 +316,15 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         id: data.id,
         fullName: data.full_name,
         email: data.email,
+        phone: data.phone ?? null,
+        location: data.location ?? null,
+        candidateRef: data.candidate_ref,
         status: (data.status as CandidateStatus | null) ?? null,
         source: data.source ?? null,
         tags: data.tags ?? [],
         note: data.note ?? null,
         offerId: data.offer_id ?? null,
-        createdAt: data.created_at ?? new Date().toISOString(),
+        createdAt: data.created_at,
         cvPath: data.cv_path ?? null,
         cvOriginalName: data.cv_original_name ?? null,
         cvMimeType: data.cv_mime_type ?? null,

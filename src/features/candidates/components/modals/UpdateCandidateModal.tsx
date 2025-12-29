@@ -34,6 +34,8 @@ type Props = {
 const INITIAL_VALUES = {
   fullName: "",
   email: "",
+  location: "",
+  phone: "",
   status: "new" as CandidateStatus,
   source: "",
   tags: "",
@@ -71,6 +73,8 @@ export function UpdateCandidateModal({
     setValues({
       fullName: candidate.fullName ?? "",
       email: candidate.email ?? "",
+      location: candidate.location ?? "",
+      phone: candidate.phone ?? "",
       status: normalizedStatus,
       source: candidate.source ?? "",
       tags: candidate.tags?.join(", ") ?? "",
@@ -116,6 +120,8 @@ export function UpdateCandidateModal({
       form.set("id", candidate.id);
       form.set("fullName", values.fullName.trim());
       form.set("email", values.email.trim());
+      form.set("location", values.location.trim());
+      form.set("phone", values.phone.trim());
       form.set("status", values.status);
       form.set("source", values.source.trim());
       form.set("tags", values.tags.trim());
@@ -195,6 +201,23 @@ export function UpdateCandidateModal({
               placeholder="email@exemple.com"
               value={values.email}
               onChange={(v) => set("email", v)}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <TextField
+              name="location"
+              label="Localisation"
+              placeholder="Paris, France"
+              value={values.location}
+              onChange={(v) => set("location", v)}
+            />
+            <TextField
+              name="phone"
+              type="text"
+              label="Téléphone"
+              placeholder="06 06 06 06 06"
+              value={values.phone}
+              onChange={(v) => set("phone", v)}
             />
           </div>
 

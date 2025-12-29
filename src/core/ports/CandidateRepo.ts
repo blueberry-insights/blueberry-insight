@@ -6,7 +6,9 @@ import type {
 export type CreateCandidateInput = {
   orgId: string;
   fullName: string;
-  email?: string | null;
+  email: string;
+  phone?: string | null;
+  location?: string | null;
   status?: CandidateStatus;
   source?: string | null;
   tags?: string[];
@@ -18,7 +20,9 @@ export type UpdateCandidateInput = {
   orgId: string;
   candidateId: string;
   fullName: string;
-  email?: string | null;
+  email:  string ;
+  phone?: string | null;
+  location?: string | null;
   status?: CandidateStatus;
   source?: string | null;
   tags?: string[];

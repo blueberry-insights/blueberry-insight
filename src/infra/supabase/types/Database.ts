@@ -16,8 +16,8 @@ export type Database = {
     Tables: {
       candidates: {
         Row: {
-          candidate_ref: string | null
-          created_at: string | null
+          candidate_ref: string
+          created_at: string
           created_by: string | null
           cv_mime_type: string | null
           cv_original_name: string | null
@@ -28,18 +28,20 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          location: string | null
           note: string | null
           offer_id: string | null
           org_id: string
+          phone: string | null
           skills: string[] | null
           source: string | null
           status: string | null
           tags: string[]
-          updated_at: string | null
+          updated_at: string
         }
         Insert: {
-          candidate_ref?: string | null
-          created_at?: string | null
+          candidate_ref?: string
+          created_at?: string
           created_by?: string | null
           cv_mime_type?: string | null
           cv_original_name?: string | null
@@ -50,18 +52,20 @@ export type Database = {
           email: string
           full_name: string
           id?: string
+          location?: string | null
           note?: string | null
           offer_id?: string | null
           org_id: string
+          phone?: string | null
           skills?: string[] | null
           source?: string | null
           status?: string | null
           tags?: string[]
-          updated_at?: string | null
+          updated_at?: string
         }
         Update: {
-          candidate_ref?: string | null
-          created_at?: string | null
+          candidate_ref?: string
+          created_at?: string
           created_by?: string | null
           cv_mime_type?: string | null
           cv_original_name?: string | null
@@ -72,14 +76,16 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          location?: string | null
           note?: string | null
           offer_id?: string | null
           org_id?: string
+          phone?: string | null
           skills?: string[] | null
           source?: string | null
           status?: string | null
           tags?: string[]
-          updated_at?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -116,6 +122,7 @@ export type Database = {
           salary_max: number | null
           salary_min: number | null
           status: string | null
+          test_id: string | null
           title: string
           updated_at: string | null
         }
@@ -136,6 +143,7 @@ export type Database = {
           salary_max?: number | null
           salary_min?: number | null
           status?: string | null
+          test_id?: string | null
           title: string
           updated_at?: string | null
         }
@@ -156,6 +164,7 @@ export type Database = {
           salary_max?: number | null
           salary_min?: number | null
           status?: string | null
+          test_id?: string | null
           title?: string
           updated_at?: string | null
         }
@@ -164,6 +173,39 @@ export type Database = {
             foreignKeyName: "offers_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      org_counters: {
+        Row: {
+          candidate_seq: number
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_seq?: number
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_seq?: number
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_counters_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -401,9 +443,93 @@ export type Database = {
           },
         ]
       }
+      test_invites: {
+        Row: {
+          candidate_id: string
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          flow_item_id: string | null
+          id: string
+          org_id: string
+          sent_at: string | null
+          status: string
+          submission_id: string | null
+          test_id: string
+          token: string
+        }
+        Insert: {
+          candidate_id: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at: string
+          flow_item_id?: string | null
+          id?: string
+          org_id: string
+          sent_at?: string | null
+          status?: string
+          submission_id?: string | null
+          test_id: string
+          token: string
+        }
+        Update: {
+          candidate_id?: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          flow_item_id?: string | null
+          id?: string
+          org_id?: string
+          sent_at?: string | null
+          status?: string
+          submission_id?: string | null
+          test_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_invites_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_invites_flow_item_id_fkey"
+            columns: ["flow_item_id"]
+            isOneToOne: false
+            referencedRelation: "test_flow_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_invites_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_invites_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "test_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_invites_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_questions: {
         Row: {
+          business_code: string | null
           created_at: string
+          dimension_code: string | null
+          dimension_order: number | null
           id: string
           is_required: boolean
           kind: string
@@ -416,7 +542,10 @@ export type Database = {
           test_id: string
         }
         Insert: {
+          business_code?: string | null
           created_at?: string
+          dimension_code?: string | null
+          dimension_order?: number | null
           id?: string
           is_required?: boolean
           kind: string
@@ -429,7 +558,10 @@ export type Database = {
           test_id: string
         }
         Update: {
+          business_code?: string | null
           created_at?: string
+          dimension_code?: string | null
+          dimension_order?: number | null
           id?: string
           is_required?: boolean
           kind?: string
@@ -486,6 +618,55 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "test_reviews_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "test_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_submission_items: {
+        Row: {
+          created_at: string
+          display_index: number
+          id: string
+          org_id: string
+          question_id: string
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_index: number
+          id?: string
+          org_id: string
+          question_id: string
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          display_index?: number
+          id?: string
+          org_id?: string
+          question_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_submission_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_submission_items_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "test_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_submission_items_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "test_submissions"
@@ -634,6 +815,7 @@ export type Database = {
     }
     Functions: {
       get_user_org_id: { Args: never; Returns: string }
+      take_next_candidate_seq: { Args: { p_org_id: string }; Returns: number }
     }
     Enums: {
       [_ in never]: never

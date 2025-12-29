@@ -124,7 +124,6 @@ export function CandidatesScreen({ orgId, initialCandidates, offers }: Props) {
     setCandidateToEditNote(null);
   }
 
-  // Handlers pour le modal de suppression
   function handleOpenDelete(candidate: CandidateListItem) {
     setCandidateToDelete(candidate);
     setDeleteModalOpen(true);

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { createCandidateAction } from "@/app/(app)/candidates/actions";
 import { uploadCandidateCvAction } from "@/app/(app)/candidates/[id]/actions";
 import { TextField, FormSubmit, GenericForm } from "@/shared/ui/forms";
-import type { CandidateListItem } from "@/core/models/Candidate";
+import type { CandidateListItem, CandidateStatus } from "@/core/models/Candidate";
 import { candidateStatusValues } from "@/core/models/Candidate";
 import type { OfferListItem } from "@/core/models/Offer";
 import { useToast } from "@/shared/hooks/useToast";
@@ -26,6 +26,18 @@ type Props = {
   offers: OfferListItem[];
 };
 
+const INITIAL_VALUES = {
+  fullName: "",
+  email: "",
+  location: "",
+  phone: "",
+  status: "new" as CandidateStatus,
+  source: "",
+  tags: "",
+  note: "",
+  offerId: "",
+};
+
 export function CreateCandidateModal({
   open,
   onClose,
@@ -33,15 +45,7 @@ export function CreateCandidateModal({
   onCreated,
   offers,
 }: Props) {
-  const [values, setValues] = useState({
-    fullName: "",
-    email: "",
-    status: "new",
-    source: "",
-    tags: "",
-    note: "",
-    offerId: "",
-  });
+  const [values, setValues] = useState(INITIAL_VALUES);
 
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -76,6 +80,8 @@ export function CreateCandidateModal({
       form.set("orgId", orgId);
       form.set("fullName", values.fullName.trim());
       form.set("email", values.email.trim());
+      form.set("location", values.location.trim());
+      form.set("phone", values.phone.trim());
       form.set("status", values.status);
       form.set("source", values.source.trim());
       form.set("tags", values.tags.trim());
@@ -122,7 +128,6 @@ export function CreateCandidateModal({
         return;
       }
 
-      // Pas de CV → on ne bloque pas
       toast.success({
         title: "Candidat créé",
         description: `${createdCandidate.fullName} a été ajouté sans CV. Vous pourrez ajouter le CV plus tard depuis sa fiche.`,
@@ -131,6 +136,27 @@ export function CreateCandidateModal({
       onClose();
     });
   }
+
+  function resetLocalState() {
+    setValues(INITIAL_VALUES);
+    setError(null);
+    setCvFile(null);
+    setCvError(null);
+  }
+
+  function handleClose() {
+    resetLocalState(); 
+    onClose();        
+  }
+
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    if (!open) return;
+    setValues(INITIAL_VALUES);
+    setError(null);
+    setCvFile(null);
+    setCvError(null);
+  }, [open]);
 
   return (
     <AppModal
@@ -142,7 +168,7 @@ export function CreateCandidateModal({
         <>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
           >
             Annuler
@@ -206,7 +232,7 @@ export function CreateCandidateModal({
               name="fullName"
               label="Nom complet"
               placeholder="Prénom Nom"
-              value={values.fullName}
+              value={values.fullName || ""}
               onChange={(v) => set("fullName", v)}
             />
 
@@ -215,11 +241,28 @@ export function CreateCandidateModal({
               type="email"
               label="Email"
               placeholder="email@exemple.com"
-              value={values.email}
+              value={values.email || ""}
               onChange={(v) => set("email", v)}
             />
           </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <TextField
+              name="location"
+              label="Localisation"
+              placeholder="Paris, France"
+              value={values.location || ""}
+              onChange={(v) => set("location", v)}
+            />
 
+            <TextField
+              name="phone"
+              type="text"
+              label="Téléphone"
+              placeholder="06 06 06 06 06"
+              value={values.phone || ""}
+              onChange={(v) => set("phone", v)}
+            />
+          </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {/* Statut */}
             <div className="space-y-1">
@@ -227,8 +270,8 @@ export function CreateCandidateModal({
                 Statut du candidat
               </label>
               <Select
-                value={values.status}
-                onValueChange={(v) => set("status", v)}
+                value={values.status || "new"}
+                onValueChange={(v) => set("status", v as CandidateStatus)}
               >
                 <SelectTrigger className="h-9 w-full rounded-lg border border-slate-200 bg-white/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60">
                   <SelectValue placeholder="Statut" />
@@ -279,7 +322,7 @@ export function CreateCandidateModal({
               name="source"
               label="Source"
               placeholder="LinkedIn, cooptation, site carrière…"
-              value={values.source}
+              value={values.source || ""}
               onChange={(v) => set("source", v)}
             />
 
@@ -287,7 +330,7 @@ export function CreateCandidateModal({
               name="tags"
               label="Tags"
               placeholder="ex : frontend, typescript, senior"
-              value={values.tags}
+              value={values.tags || ""}
               onChange={(v) => set("tags", v)}
             />
           </div>
@@ -311,7 +354,7 @@ export function CreateCandidateModal({
               name="note"
               rows={3}
               className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 transition resize-y"
-              value={values.note}
+              value={values.note || ""}
               onChange={(e) => set("note", e.target.value)}
             />
             <p className="text-[10px] text-slate-400">

@@ -11,7 +11,7 @@ type Props = {
   onUpdateRequest?: (candidate: CandidateListItem) => void;
   onStatusUpdated?: (
     candidateId: string,
-    newStatus: CandidateListItem["status"],
+    newStatus: CandidateListItem["status"]
   ) => void;
 };
 
@@ -37,10 +37,11 @@ export function CandidateTable({
         <thead className="border-b text-xs uppercase tracking-wide text-slate-600 bg-[rgba(139,151,255,0.08)]">
           <tr>
             <th className="text-left px-4 py-3">Candidat</th>
+            <th className="text-left px-4 py-3 hidden lg:table-cell w-[160px]">
+              Réf
+            </th>
             <th className="text-left px-4 py-3">Statut</th>
             <th className="text-left px-4 py-3">Créé le</th>
-            <th className="text-left px-4 py-3">Source</th>
-            <th className="text-left px-4 py-3">Tags</th>
             <th className="text-left px-4 py-3">Offre</th>
             <th className="text-left px-4 py-3">Note</th>
             <th className="text-left px-4 py-3">Actions</th>
@@ -71,7 +72,7 @@ export function CandidateTable({
                 colSpan={8}
                 className="px-4 py-6 text-center text-sm text-slate-500 bg-slate-50"
               >
-                Aucun candidat pour le moment.  
+                Aucun candidat pour le moment.
                 <span className="block text-[11px] text-slate-400 mt-1">
                   Clique sur &laquo; Nouveau candidat &raquo; pour commencer à
                   alimenter ton vivier.

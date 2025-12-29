@@ -7,6 +7,7 @@ export type TestQuestionKind =
   | "choice"
   | "long_text";
 
+  export type TestInviteStatus = "pending" | "completed" | "revoked" | "expired";
 
 export interface Test {
   id: string;
@@ -19,6 +20,24 @@ export interface Test {
   createdAt: string; // IS
 }
 
+export interface TestInvite {
+  id: string;
+  orgId: string;
+  candidateId: string;
+  testId: string;
+  flowItemId?: string | null;
+
+  token: string;             
+  status: TestInviteStatus;
+
+  expiresAt: string;          
+  createdAt: string;        
+  sentAt?: string | null;
+  completedAt?: string | null;
+
+  submissionId?: string | null;
+}
+
 export interface TestQuestion {
   id: string;
   orgId: string;
@@ -27,14 +46,13 @@ export interface TestQuestion {
   kind: TestQuestionKind;
   minValue?: number | null;
   maxValue?: number | null;
-  /**
-   * Pour kind = "choice" : liste d'options possibles
-   * Pour les autres : normalement null
-   */
   options?: string[] | null;
   orderIndex: number;
   isRequired: boolean;
-  createdAt: string; // ISO date
+  createdAt: string; // ISO 
+  businessCode?: string | null;      // ex: "D1.1"
+  dimensionCode?: string | null;     // ex: "D1"
+  dimensionOrder?: number | null;
 }
 
 export interface TestSubmission {
@@ -45,11 +63,6 @@ export interface TestSubmission {
   offerId?: string | null;
   submittedBy?: string | null;
   submittedAt: string; // ISO date
-
-  /**
-   * Pour type = "motivations" uniquement (scorable)
-   * Pour type = "scenario" → toujours null
-   */
   numericScore?: number | null;
   maxScore?: number | null;
 }
@@ -129,6 +142,9 @@ export interface CreateQuestionInput {
   options?: string[];
   orderIndex?: number;
   isRequired?: boolean;
+  businessCode?: string | null;
+  dimensionCode?: string | null;
+  dimensionOrder?: number | null;
 }
 
 export interface UpdateQuestionInput {
@@ -184,4 +200,13 @@ export interface CreateTestReviewInput {
   reviewerId: string;
   overallComment?: string | null;
   axisComments?: TestReviewAxisComment[];
+}
+
+export interface CreateSubmissionItemsInput {
+  orgId: string;
+  submissionId: string;
+  items: {
+    questionId: string;
+    displayIndex: number;
+  }[];
 }

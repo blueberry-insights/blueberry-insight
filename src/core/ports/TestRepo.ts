@@ -16,13 +16,10 @@ import type {
     UpdateQuestionInput,
     ArchiveTestInput,
     DeleteTestInput,
+    CreateSubmissionItemsInput,
   } from "../models/Test";
   
   export interface TestRepo {
-    // ---------------------------------------------------------------------------
-    // TESTS (questionnaires / scénarios)
-    // ---------------------------------------------------------------------------
-  
     listTestsByOrg(orgId: string): Promise<Test[]>;
     getTestById(id: string, orgId: string): Promise<Test | null>;
     createTest(input: CreateTestInput): Promise<Test>;
@@ -42,6 +39,7 @@ import type {
 
     reorderQuestions(input: ReorderQuestionsInput): Promise<void>;
     deleteQuestion(questionId: string, orgId: string): Promise<void>;
+    createSubmissionItems(input: CreateSubmissionItemsInput): Promise<void>;
     startSubmission(
       input: StartTestSubmissionInput
     ): Promise<TestSubmission>;
@@ -66,5 +64,19 @@ import type {
       submissionId: string,
       orgId: string
     ): Promise<TestReview[]>;
+    startSubmission(
+      input: StartTestSubmissionInput
+    ): Promise<TestSubmission>;
+  
+    createSubmissionItems(input: {
+      orgId: string;
+      submissionId: string;
+      items: { questionId: string; displayIndex: number }[];
+    }): Promise<void>;
+  
+    submitAnswers(
+      input: SubmitTestAnswersInput
+    ): Promise<{ submission: TestSubmission; answers: TestAnswer[] }>;
+  
   }
   

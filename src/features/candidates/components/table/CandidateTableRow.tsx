@@ -11,17 +11,27 @@ type Props = {
   onEditNote?: (candidate: CandidateListItem) => void;
   onDeleteRequest?: (candidate: CandidateListItem) => void;
   onUpdateRequest?: (candidate: CandidateListItem) => void;
-  onStatusUpdated?: (candidateId: string, newStatus: CandidateListItem["status"]) => void;
+  onStatusUpdated?: (
+    candidateId: string,
+    newStatus: CandidateListItem["status"]
+  ) => void;
 };
 
-function truncateNote(note: string | null, maxLength = 80): string {
+function truncateNote(note: string | null, maxLength = 30): string {
   const notePreview = (note || "").trim();
   return notePreview.length > maxLength
     ? notePreview.slice(0, maxLength) + "…"
     : notePreview;
 }
 
-export function CandidateTableRow({ candidate, offer, onEditNote, onDeleteRequest, onUpdateRequest, onStatusUpdated }: Props) {
+export function CandidateTableRow({
+  candidate,
+  offer,
+  onEditNote,
+  onDeleteRequest,
+  onUpdateRequest,
+  onStatusUpdated,
+}: Props) {
   const truncatedNote = truncateNote(candidate.note);
 
   function handleStatusUpdated(newStatus: CandidateListItem["status"]) {
@@ -48,6 +58,12 @@ export function CandidateTableRow({ candidate, offer, onEditNote, onDeleteReques
         </Link>
       </td>
 
+      <td className="px-4 py-6 hidden lg:table-cell">
+        <span className="text-xs text-muted-foreground font-mono">
+          <span className="select-all">{candidate.candidateRef}</span>
+        </span>
+      </td>
+
       <td className="px-4 py-6 align-middle">
         <StatusDropdown
           candidateId={candidate.id}
@@ -59,25 +75,6 @@ export function CandidateTableRow({ candidate, offer, onEditNote, onDeleteReques
       <td className="px-4 py-6">
         {new Date(candidate.createdAt).toLocaleDateString("fr-FR")}
       </td>
-
-      <td className="px-4 py-6">
-        {candidate.source && candidate.source.trim().length > 0 ? (
-          candidate.source
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </td>
-
-      <td className="px-4 py-6">
-        {candidate.tags && candidate.tags.length > 0 ? (
-          <span className="text-xs text-muted-foreground">
-            {candidate.tags.join(", ")}
-          </span>
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </td>
-
       <td className="px-4 py-6">
         {offer ? (
           <span className="text-xs text-muted-foreground">{offer.title}</span>
@@ -85,7 +82,6 @@ export function CandidateTableRow({ candidate, offer, onEditNote, onDeleteReques
           <span className="text-xs text-muted-foreground">—</span>
         )}
       </td>
-
 
       <td className="px-4 py-2 align-middle text-slate-600">
         <span
@@ -96,8 +92,12 @@ export function CandidateTableRow({ candidate, offer, onEditNote, onDeleteReques
         </span>
       </td>
 
-      <CandidateTableActions candidate={candidate} onEditNote={onEditNote} onDeleteRequest={onDeleteRequest} onUpdateRequest={onUpdateRequest} />
+      <CandidateTableActions
+        candidate={candidate}
+        onEditNote={onEditNote}
+        onDeleteRequest={onDeleteRequest}
+        onUpdateRequest={onUpdateRequest}
+      />
     </tr>
   );
 }
-

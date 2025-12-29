@@ -14,7 +14,10 @@ export type CandidateStatus = (typeof candidateStatusValues)[number];
 export type CandidateListItem = {
   id: string;
   fullName: string;
-  email: string | null;
+  email?: string | null;
+  phone?: string | null;
+  location?: string | null;
+  candidateRef: string;
   status: CandidateStatus | null;
   source: string | null;
   offerId: string | null;

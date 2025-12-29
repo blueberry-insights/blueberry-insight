@@ -5,12 +5,9 @@ import type { CandidateRepo, CreateCandidateInput } from "@/core/ports/Candidate
 export const CandidateSchema = z.object({
   orgId: z.string().uuid(),
   fullName: z.string().trim().min(2, "Le nom doit contenir au moins 2 caractères"),
-  email: z
-    .string()
-    .trim()
-    .email("Email invalide")
-    .optional()
-    .nullable(),
+  email: z.email("Email invalide"),
+  location: z.string().trim().optional().nullable(),
+  phone: z.string().trim().optional().nullable(),
   status: z.enum(candidateStatusValues).optional(),
   source: z
     .string()
@@ -51,6 +48,8 @@ export function makeCreateCandidate(repo: CandidateRepo) {
       orgId: parsed.orgId,
       fullName: parsed.fullName,
       email: parsed.email ?? null,
+      location: parsed.location ?? null,
+      phone: parsed.phone ?? null,
       status: parsed.status,
       source: parsed.source ?? null,
       tags: parsed.tags, 
