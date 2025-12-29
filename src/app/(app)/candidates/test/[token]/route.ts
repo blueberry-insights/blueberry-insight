@@ -1,14 +1,19 @@
-// app/candidate/test/[token]/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { makeTestInfraForServiceRole } from "@/infra/supabase/composition";
+// app/(app)/candidates/test/[token]/route.ts
+import { NextResponse } from "next/server";
+import { supabaseServerRSC } from "@/infra/supabase/client";
+import { makeTestRepo } from "@/infra/supabase/adapters/test.repo.supabase";
+import { makeTestInviteRepo } from "@/infra/supabase/adapters/testInvite.repo.supabase";
 import { makeStartSubmissionFromInvite } from "@/core/usecases/tests/startSubmissionFromInvite";
 
-type RouteContext = {
-  params: { token: string };
+type RouteParams = {
+  params: Promise<{ token: string }>;
 };
 
-export async function GET(_req: NextRequest, ctx: RouteContext) {
-  const token = ctx.params.token;
+/**
+ * GET /candidates/test/[token]
+ */
+export async function GET(_req: Request, { params }: RouteParams) {
+  const { token } = await params;
 
   if (!token) {
     return NextResponse.json(
@@ -17,15 +22,17 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     );
   }
 
-  const { testRepo, testInviteRepo } = makeTestInfraForServiceRole();
+  const sb = await supabaseServerRSC();
+  const testRepo = makeTestRepo(sb);
+  const inviteRepo = makeTestInviteRepo(sb);
 
   const startSubmissionFromInvite = makeStartSubmissionFromInvite({
     testRepo,
-    inviteRepo: testInviteRepo,
+    inviteRepo,
   });
 
   try {
-    const invite = await testInviteRepo.getByToken(token);
+    const invite = await inviteRepo.getByToken(token);
     if (!invite) {
       return NextResponse.json(
         { ok: false, error: "Invitation introuvable ou invalide." },
@@ -51,19 +58,26 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
       { status: 200 }
     );
   } catch (err: unknown) {
-    console.error("[GET /candidate/test/[token]] error", err);
+    console.error("[GET /candidates/test/[token]] error", err);
+
     const message =
       err instanceof Error ? err.message : "Erreur lors du démarrage du test.";
 
     return NextResponse.json(
-      { ok: false, error: message },
+      {
+        ok: false,
+        error: message,
+      },
       { status: 400 }
     );
   }
 }
 
-export async function POST(req: NextRequest, ctx: RouteContext) {
-  const token = ctx.params.token;
+/**
+ * POST /candidates/test/[token]
+ */
+export async function POST(req: Request, { params }: RouteParams) {
+  const { token } = await params;
 
   if (!token) {
     return NextResponse.json(
@@ -97,9 +111,11 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     );
   }
 
-  const { testRepo, testInviteRepo } = makeTestInfraForServiceRole();
+  const sb = await supabaseServerRSC();
+  const testRepo = makeTestRepo(sb);
+  const inviteRepo = makeTestInviteRepo(sb);
 
-  const invite = await testInviteRepo.getByToken(token);
+  const invite = await inviteRepo.getByToken(token);
   if (!invite || !invite.submissionId || invite.submissionId !== submissionId) {
     return NextResponse.json(
       {
@@ -167,19 +183,28 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
       maxScore,
     });
 
-    await testInviteRepo.markCompleted({ inviteId: invite.id });
+    await inviteRepo.markCompleted({ inviteId: invite.id });
 
     return NextResponse.json(
-      { ok: true, data: { submission, answers: storedAnswers } },
+      {
+        ok: true,
+        data: {
+          submission,
+          answers: storedAnswers,
+        },
+      },
       { status: 200 }
     );
   } catch (err: unknown) {
-    console.error("[POST /candidate/test/[token]] error", err);
+    console.error("[POST /candidates/test/[token]] error", err);
     const message =
       err instanceof Error ? err.message : "Erreur lors de l'enregistrement du test.";
 
     return NextResponse.json(
-      { ok: false, error: message },
+      {
+        ok: false,
+        error: message,
+      },
       { status: 500 }
     );
   }
