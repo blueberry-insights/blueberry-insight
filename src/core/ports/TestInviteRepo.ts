@@ -3,12 +3,12 @@ import type {
   } from "../models/Test";
   
   export interface CreateTestInviteInput {
+    token: string;
     orgId: string;
     candidateId: string;
     testId: string;
     flowItemId?: string;
     expiresAt: string; 
-    token: string;
   }
 
   export interface LinkSubmissionToInviteInput {

@@ -43,4 +43,5 @@ export interface OfferRepo {
   create(input: CreateOfferInput): Promise<Offer>;
   update(input: UpdateOfferInput): Promise<Offer>;
   deleteById(input: { orgId: string; offerId: string }): Promise<void>;
+  archiveById(input: { orgId: string; offerId: string }): Promise<void>;
 }

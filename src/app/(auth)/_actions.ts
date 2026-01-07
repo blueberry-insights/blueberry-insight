@@ -7,6 +7,7 @@ import {
   UpdatePasswordSchema,
 } from "@/shared/validation/auth";
 import { sanitizeRedirect } from "@/shared/utils/sanitizeRedirect";
+import { env } from "@/config/env";
 import { makeAuthServiceForAction } from "@/infra/supabase/composition";
 import { supabaseAdmin } from "@/infra/supabase/client";
 import { makeLoginUser } from "@/core/usecases/auth/loginUser";
@@ -76,7 +77,7 @@ export async function registerAction(formData: FormData) {
     return redirect(`/register?error=${encodeURIComponent(msg)}`);
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const appUrl = env.NEXT_PUBLIC_APP_URL?.trim();
 
   // Important : on marque bien le flow signup + on passe l'email au callback
   const emailRedirectTo =
@@ -130,7 +131,7 @@ export async function resetPasswordAction(
   const parsed = ResetPasswordSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { ok: false, error: "Email invalide" };
 
-  const rawAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const rawAppUrl = env.NEXT_PUBLIC_APP_URL;
   if (!rawAppUrl) {
     console.error("[resetPasswordAction] NEXT_PUBLIC_APP_URL is not set");
     return { ok: false, error: "Configuration invalide" };

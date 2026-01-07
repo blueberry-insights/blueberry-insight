@@ -4,12 +4,12 @@
 import { revalidatePath } from "next/cache";
 import { withAuth } from "@/infra/supabase/session";
 import { makeTestRepo } from "@/infra/supabase/adapters/test.repo.supabase";
-import { makeCreateTest } from "@/core/usecases/tests/createTest";
-import { makeDuplicateTest } from "@/core/usecases/tests/duplicateTest";
-import { makeUpdateTest } from "@/core/usecases/tests/updateTest";
-import { makeDeleteTest } from "@/core/usecases/tests/deleteTest";
+import { makeArchiveTest ,makeDeleteTest, makeUpdateTest, makeCreateTest, makeDuplicateTest} from "@/core/usecases/tests";
 import { makeTestFlowRepo } from "@/infra/supabase/adapters/testFlow.repo.supabase";
 
+
+type ArchiveOk = { ok: true };
+type ArchiveErr = { ok: false; error: string };
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
 
@@ -143,3 +143,23 @@ export async function deleteTestAction(
   });
 }
 
+export async function archiveTestAction(formData: FormData): Promise<ArchiveOk | ArchiveErr> {
+  return withAuth(async (ctx) => {
+    const testId = String(formData.get("testId") ?? "").trim();
+    const orgId = ctx.orgId;
+
+    if (!orgId) return { ok: false, error: "Organisation introuvable" };
+    if (!testId) return { ok: false, error: "Test introuvable" };
+
+    const repo = makeTestRepo(ctx.sb);
+    const archiveTest = makeArchiveTest(repo);
+
+    try {
+      await archiveTest({ orgId, testId });
+      return { ok: true };
+    } catch (err) {
+      console.error("[archiveTestAction] error:", err);
+      return { ok: false, error: "Erreur lors de l’archivage du test" };
+    }
+  });
+}

@@ -7,12 +7,15 @@ import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
 import { makeCreateOffer } from "@/core/usecases/offers/createOffer";
 import { makeUpdateOffer } from "@/core/usecases/offers/updateOffer";
 import { makeDeleteOffer } from "@/core/usecases/offers/deleteOffer";
-import { supabaseAdmin } from "@/infra/supabase/client";
+import { makeArchiveOffer } from "@/core/usecases/offers/archiveOffer";
+import { makeUserInfoRepoForAction } from "@/infra/supabase/composition";
 
 type Ok = { ok: true; offer: OfferListItem };
 type Err = { ok: false; error: string };
 type DeleteOk = { ok: true };
 type DeleteErr = { ok: false; error: string };
+type ArchiveOk = { ok: true };
+type ArchiveErr = { ok: false; error: string };
 
 export type DeleteOfferResult = DeleteOk | DeleteErr;
 
@@ -47,16 +50,9 @@ export async function createOfferAction(
     try {
       const offer = await createOffer(raw);
       
-      let userName: string | null = null;
-      if (ctx.userId) {
-        try {
-          const adminClient = supabaseAdmin();
-          const { data: userData } = await adminClient.auth.admin.getUserById(ctx.userId);
-          userName = userData?.user?.user_metadata?.full_name ?? null;
-        } catch (err) {
-          console.warn(`Unable to fetch user ${ctx.userId}:`, err);
-        }
-      }
+      // Récupérer le nom de l'utilisateur responsable
+      const userInfoRepo = makeUserInfoRepoForAction();
+      const userInfo = ctx.userId ? await userInfoRepo.getUserById(ctx.userId) : null;
       
       const offerListItem: OfferListItem = {
         id: offer.id,
@@ -75,7 +71,7 @@ export async function createOfferAction(
         currency: offer.currency,
         createdBy: offer.createdBy,
         responsibleUserId: offer.responsibleUserId,
-        responsibleUserName: userName,
+        responsibleUserName: userInfo?.fullName ?? null,
         candidateCount: 0,
       };
       return { ok: true, offer: offerListItem };
@@ -126,34 +122,17 @@ export async function updateOfferAction(
       if (!fullOffer) {
         return { ok: false, error: "Offre introuvable après mise à jour" };
       }
-      const adminClient = supabaseAdmin();
-      const [responsibleUserName] = await Promise.all([
-        fullOffer.responsibleUserId
-          ? adminClient.auth.admin
-              .getUserById(fullOffer.responsibleUserId)
-              .then(
-                ({ data }) => data?.user?.user_metadata?.full_name ?? null
-              )
-              .catch((err) => {
-                console.warn(
-                  `Unable to fetch user ${fullOffer.responsibleUserId}:`,
-                  err
-                );
-                return null;
-              })
-          : Promise.resolve(null),
-        fullOffer.createdBy
-          ? adminClient.auth.admin
-              .getUserById(fullOffer.createdBy)
-              .then(
-                ({ data }) => data?.user?.user_metadata?.full_name ?? null
-              )
-              .catch((err) => {
-                console.warn(`Unable to fetch user ${fullOffer.createdBy}:`, err);
-                return null;
-              })
-          : Promise.resolve(null),
-      ]);
+      
+      const userInfoRepo = makeUserInfoRepoForAction();
+      const userIds = [
+        fullOffer.responsibleUserId,
+        fullOffer.createdBy,
+      ].filter((id): id is string => id !== null);
+      
+      const userInfoMap = await userInfoRepo.getUsersByIds(userIds);
+      const responsibleUserName = fullOffer.responsibleUserId
+        ? userInfoMap.get(fullOffer.responsibleUserId)?.fullName ?? null
+        : null;
       
       const offerListItem: OfferListItem = {
         id: fullOffer.id,
@@ -208,6 +187,29 @@ export async function deleteOfferAction(
       }
       console.error("[deleteOfferAction] error:", err);
       return { ok: false, error: "Erreur lors de la suppression de l'offre" };
+    }
+  });
+}
+
+export async function archiveOfferAction(
+  formData: FormData
+): Promise<ArchiveOk | ArchiveErr> {
+  return withAuth(async (ctx) => {
+    const orgId = ctx.orgId;
+    if (!orgId) return { ok: false, error: "Organisation introuvable." };
+
+    const offerId = String(formData.get("offerId") ?? "").trim();
+    if (!offerId) return { ok: false, error: "Offre introuvable." };
+
+    const repo = makeOfferRepo(ctx.sb);
+    const archiveOffer = makeArchiveOffer(repo);
+
+    try {
+      await archiveOffer({ orgId, offerId });
+      return { ok: true };
+    } catch (err) {
+      console.error("[archiveOfferAction] error:", err);
+      return { ok: false, error: "Erreur lors de l’archivage de l’offre." };
     }
   });
 }

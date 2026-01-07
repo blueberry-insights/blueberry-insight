@@ -30,6 +30,12 @@ export type UpdateCandidateInput = {
   offerId?: string | null;
 };
 
+export type ArchiveCandidateByIdInput = {
+  orgId: string;
+  candidateId: string;
+  archivedAt?: string | null;
+};
+
 export interface CandidateRepo {
   listByOrg(orgId: string): Promise<CandidateListItem[]>;
   create(input: CreateCandidateInput): Promise<CandidateListItem>;
@@ -50,4 +56,6 @@ export interface CandidateRepo {
     sizeBytes: number;
     uploadedAt: string;
   }): Promise<CandidateListItem>;
+  archiveById(input: ArchiveCandidateByIdInput): Promise<void>;
+
 }

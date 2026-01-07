@@ -2,7 +2,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MembershipRepo } from "@/core/ports/MembershipRepo";
 import type { OrgRole, OrgMember } from "@/core/models/Membership";
-import { supabaseAdmin } from "@/infra/supabase/client";
 
 export function makeMembershipRepo(sb: SupabaseClient): MembershipRepo {
   return {
@@ -43,32 +42,19 @@ export function makeMembershipRepo(sb: SupabaseClient): MembershipRepo {
       if (error) throw error;
       if (!data?.length) return [];
       
-      // Récupérer les infos des utilisateurs
-      const adminClient = supabaseAdmin();
-      const members = await Promise.all(
-        data.map(async (row) => {
-          try {
-            const { data: userData } = await adminClient.auth.admin.getUserById(row.user_id);
-            return {
-              userId: row.user_id,
-              orgId: row.org_id,
-              role: row.role as OrgRole,
-              createdAt: row.created_at,
-              email: userData?.user?.email,
-              fullName: userData?.user?.user_metadata?.full_name,
-            };
-          } catch {
-            return {
-              userId: row.user_id,
-              orgId: row.org_id,
-              role: row.role as OrgRole,
-              createdAt: row.created_at,
-            };
-          }
-        })
-      );
+      // Le repo ne récupère plus les infos utilisateur ici.
+      // Cette logique doit être faite dans les actions/pages via getUserInfo().
+      // Cela évite d'utiliser supabaseAdmin() dans le repo.
+      const members = data.map((row) => ({
+        userId: row.user_id,
+        orgId: row.org_id,
+        role: row.role as OrgRole,
+        createdAt: row.created_at,
+        email: null, // Sera enrichi dans les actions/pages si nécessaire
+        fullName: null, // Sera enrichi dans les actions/pages si nécessaire
+      }));
       
-      return members;
+      return members as unknown as OrgMember[];
     },
     
     async isMember(userId: string, orgId: string): Promise<boolean> {

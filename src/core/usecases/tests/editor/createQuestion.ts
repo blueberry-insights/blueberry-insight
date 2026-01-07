@@ -13,6 +13,10 @@ const InputSchema = z.object({
   options: z.array(z.string()).optional(),
   isRequired: z.boolean().optional(),
   orderIndex: z.number().int().optional(),
+  // Ces champs sont optionnels - s'ils ne sont pas fournis, ils seront générés automatiquement
+  businessCode: z.string().optional().nullable(),
+  dimensionCode: z.string().optional().nullable(),
+  dimensionOrder: z.number().int().optional().nullable(),
 });
 
 export function makeCreateQuestion(testRepo: TestRepo) {
@@ -28,7 +32,10 @@ export function makeCreateQuestion(testRepo: TestRepo) {
       maxValue: input.maxValue,
       options: input.options,
       isRequired: input.isRequired ?? true,
-      orderIndex: input.orderIndex, 
+      orderIndex: input.orderIndex,
+      businessCode: input.businessCode ?? undefined,
+      dimensionCode: input.dimensionCode ?? undefined,
+      dimensionOrder: input.dimensionOrder ?? undefined,
     };
 
     const created = await testRepo.addQuestion(payload);

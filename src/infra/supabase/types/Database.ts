@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       candidates: {
         Row: {
+          archived_at: string | null
           candidate_ref: string
           created_at: string
           created_by: string | null
@@ -40,6 +41,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archived_at?: string | null
           candidate_ref?: string
           created_at?: string
           created_by?: string | null
@@ -64,6 +66,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archived_at?: string | null
           candidate_ref?: string
           created_at?: string
           created_by?: string | null
@@ -106,6 +109,7 @@ export type Database = {
       }
       offers: {
         Row: {
+          archived_at: string | null
           city: string | null
           contract_type: string | null
           country: string | null
@@ -127,6 +131,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          archived_at?: string | null
           city?: string | null
           contract_type?: string | null
           country?: string | null
@@ -148,6 +153,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          archived_at?: string | null
           city?: string | null
           contract_type?: string | null
           country?: string | null
@@ -330,6 +336,47 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "test_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_dimensions: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          next_question_index: number
+          order_index: number
+          org_id: string
+          test_id: string
+          title: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          next_question_index?: number
+          order_index?: number
+          org_id: string
+          test_id: string
+          title: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          next_question_index?: number
+          order_index?: number
+          org_id?: string
+          test_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_dimensions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
             referencedColumns: ["id"]
           },
         ]
@@ -677,6 +724,9 @@ export type Database = {
       test_submissions: {
         Row: {
           candidate_id: string
+          completed_at: string | null
+          flow_id: string | null
+          flow_item_id: string | null
           id: string
           max_score: number | null
           numeric_score: number | null
@@ -688,6 +738,9 @@ export type Database = {
         }
         Insert: {
           candidate_id: string
+          completed_at?: string | null
+          flow_id?: string | null
+          flow_item_id?: string | null
           id?: string
           max_score?: number | null
           numeric_score?: number | null
@@ -699,6 +752,9 @@ export type Database = {
         }
         Update: {
           candidate_id?: string
+          completed_at?: string | null
+          flow_id?: string | null
+          flow_item_id?: string | null
           id?: string
           max_score?: number | null
           numeric_score?: number | null
@@ -741,6 +797,7 @@ export type Database = {
       }
       tests: {
         Row: {
+          archived_at: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -751,6 +808,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -761,6 +819,7 @@ export type Database = {
           type: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -814,6 +873,53 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_test_question: {
+        Args: {
+          p_dimension_code: string
+          p_is_required?: boolean
+          p_kind: string
+          p_label: string
+          p_max_value?: number
+          p_min_value?: number
+          p_options?: Json
+          p_org_id: string
+          p_test_id: string
+        }
+        Returns: {
+          business_code: string | null
+          created_at: string
+          dimension_code: string | null
+          dimension_order: number | null
+          id: string
+          is_required: boolean
+          kind: string
+          label: string
+          max_value: number | null
+          min_value: number | null
+          options: Json | null
+          order_index: number
+          org_id: string
+          test_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "test_questions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      archive_candidate: {
+        Args: { p_candidate_id: string; p_org_id: string }
+        Returns: undefined
+      }
+      archive_offer: {
+        Args: { p_offer_id: string; p_org_id: string }
+        Returns: undefined
+      }
+      archive_test: {
+        Args: { p_org_id: string; p_test_id: string }
+        Returns: undefined
+      }
       get_user_org_id: { Args: never; Returns: string }
       take_next_candidate_seq: { Args: { p_org_id: string }; Returns: number }
     }

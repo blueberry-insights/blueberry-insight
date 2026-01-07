@@ -8,13 +8,11 @@ type Props = {
   onUpdateRequest?: (test: Test) => void;
   onArchiveRequest?: (test: Test) => void;
   onDuplicateRequest?: (test: Test) => void;
-  onDeleteRequest?: (test: Test) => void;
   duplicatePending?: boolean;
-  deletePending?: boolean;
   archivePending?: boolean;
 };
 
-export function TestLibraryTableRow({ test, onUpdateRequest, onDuplicateRequest, duplicatePending, onDeleteRequest, deletePending, onArchiveRequest, archivePending }: Props) {
+export function TestLibraryTableRow({ test, onUpdateRequest, onDuplicateRequest, duplicatePending, onArchiveRequest, archivePending }: Props) {
   const createdDate = test.createdAt
     ? new Date(test.createdAt).toLocaleDateString("fr-FR")
     : "-";
@@ -61,8 +59,6 @@ export function TestLibraryTableRow({ test, onUpdateRequest, onDuplicateRequest,
         onUpdateRequest={onUpdateRequest}
         onDuplicateRequest={onDuplicateRequest}
         duplicatePending={duplicatePending}
-        onDeleteRequest={onDeleteRequest}
-        deletePending={deletePending}
         onArchiveRequest={onArchiveRequest}
         archivePending={archivePending}
       />

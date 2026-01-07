@@ -21,7 +21,12 @@ type Props = {
   onDelete: (questionId: string) => Promise<void>;
 };
 
-export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) {
+export function TestQuestionRow({
+  index,
+  question,
+  onUpdate,
+  onDelete,
+}: Props) {
   const [open, setOpen] = React.useState(false);
 
   // draft local (uniquement pour le panneau)
@@ -33,13 +38,15 @@ export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) 
   const [maxValue, setMaxValue] = React.useState<string>(
     question.maxValue != null ? String(question.maxValue) : ""
   );
-  const [optionsText, setOptionsText] = React.useState((question.options ?? []).join("\n"));
+  const [optionsText, setOptionsText] = React.useState(
+    (question.options ?? []).join("\n")
+  );
 
   const [pendingSave, startSave] = React.useTransition();
   const [pendingDelete, startDelete] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
 
-  // si la question change depuis le parent (reorder/update), on resync draft
+
   React.useEffect(() => {
     setLabel(question.label);
     setKind(question.kind);
@@ -47,16 +54,23 @@ export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) 
     setMaxValue(question.maxValue != null ? String(question.maxValue) : "");
     setOptionsText((question.options ?? []).join("\n"));
     setError(null);
-  }, [question.id, question.label, question.kind, question.minValue, question.maxValue, question.options]);
+  }, [
+    question.id,
+    question.label,
+    question.kind,
+    question.minValue,
+    question.maxValue,
+    question.options,
+  ]);
 
   const kindLabel =
     question.kind === "yes_no"
       ? "Oui / Non"
       : question.kind === "scale"
-      ? "Échelle"
-      : question.kind === "choice"
-      ? "Choix"
-      : "Texte libre";
+        ? "Échelle"
+        : question.kind === "choice"
+          ? "Choix"
+          : "Texte libre";
 
   function resetDraft() {
     setLabel(question.label);
@@ -79,8 +93,10 @@ export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) 
     const patch: Partial<TestQuestion> = {
       label: label.trim(),
       kind,
-      minValue: kind === "scale" ? (minValue === "" ? null : Number(minValue)) : null,
-      maxValue: kind === "scale" ? (maxValue === "" ? null : Number(maxValue)) : null,
+      minValue:
+        kind === "scale" ? (minValue === "" ? null : Number(minValue)) : null,
+      maxValue:
+        kind === "scale" ? (maxValue === "" ? null : Number(maxValue)) : null,
       options:
         kind === "choice"
           ? optionsText
@@ -95,7 +111,9 @@ export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) 
         await onUpdate(question.id, patch);
         setOpen(false);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur lors de la mise à jour");
+        setError(
+          e instanceof Error ? e.message : "Erreur lors de la mise à jour"
+        );
       }
     });
   }
@@ -105,13 +123,15 @@ export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) 
       try {
         await onDelete(question.id);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur lors de la suppression");
+        setError(
+          e instanceof Error ? e.message : "Erreur lors de la suppression"
+        );
       }
     });
   }
 
   return (
-  <>
+    <>
       <div className="flex items-start justify-between gap-2 p-1">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center gap-2">
@@ -128,6 +148,9 @@ export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) 
 
           <div className="text-sm font-semibold text-slate-900 truncate">
             {question.label}
+            <span className="ml-2 text-[10px] text-slate-400">
+            Réf. {question.businessCode ?? ""}
+            </span>
           </div>
 
           {question.kind === "scale" && (
@@ -152,7 +175,11 @@ export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) 
             disabled={pendingSave || pendingDelete}
             aria-label={open ? "Fermer" : "Modifier"}
           >
-            {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {open ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
           </Button>
 
           <Button
@@ -219,7 +246,9 @@ export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) 
 
           {kind === "choice" && (
             <div className="space-y-1">
-              <p className="text-[11px] text-slate-500">Options (1 par ligne)</p>
+              <p className="text-[11px] text-slate-500">
+                Options (1 par ligne)
+              </p>
               <textarea
                 rows={3}
                 className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 transition resize-y"

@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Tables, TablesInsert, TablesUpdate } from "../types/Database";
+import type {
+  Database,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+} from "../types/Database";
 import type { TestRepo } from "@/core/ports/TestRepo";
 import type {
   Test,
@@ -17,7 +22,7 @@ import type {
   TestSubmission,
   UpdateQuestionInput,
   DeleteTestInput,
-  ArchiveTestInput,
+  TestDimensionInput,
 } from "@/core/models/Test";
 
 type Db = SupabaseClient<Database>;
@@ -32,6 +37,7 @@ function mapTestRow(row: Tables<"tests">): Test {
     isActive: row.is_active,
     createdBy: row.created_by,
     createdAt: row.created_at,
+    archivedAt: row.archived_at ?? null,
   };
 }
 function mapSubmissionRow(row: Tables<"test_submissions">): TestSubmission {
@@ -45,6 +51,9 @@ function mapSubmissionRow(row: Tables<"test_submissions">): TestSubmission {
     submittedAt: row.submitted_at,
     numericScore: row.numeric_score ?? null,
     maxScore: row.max_score ?? null,
+    flowId: row.flow_id ?? null,
+    flowItemId: row.flow_item_id ?? null,
+    completedAt: (row as any).completed_at ?? null,
   };
 }
 
@@ -82,6 +91,22 @@ function mapQuestionRow(row: Tables<"test_questions">): TestQuestion {
   };
 }
 
+type TestDimension = {
+  id: string;
+  code: string;
+  title: string;
+  orderIndex: number;
+};
+
+function mapDimensionRow(row: Tables<"test_dimensions">): TestDimension {
+  return {
+    id: row.id,
+    code: row.code,
+    title: row.title,
+    orderIndex: row.order_index,
+  };
+}
+
 export function makeTestRepo(sb: Db): TestRepo {
   return {
     async listTestsByOrg(orgId: string): Promise<Test[]> {
@@ -89,6 +114,7 @@ export function makeTestRepo(sb: Db): TestRepo {
         .from("tests")
         .select("*")
         .eq("org_id", orgId)
+        .is("archived_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -101,6 +127,7 @@ export function makeTestRepo(sb: Db): TestRepo {
         .select("*")
         .eq("id", id)
         .eq("org_id", orgId)
+        .is("archived_at", null)
         .maybeSingle();
 
       if (error) {
@@ -161,40 +188,32 @@ export function makeTestRepo(sb: Db): TestRepo {
     async deleteTest(input: DeleteTestInput): Promise<void> {
       const { testId, orgId } = input;
       console.log("[TestRepo.deleteTest] deleting", { testId, orgId });
-    
+
       const { error } = await sb
         .from("tests")
         .delete()
         .eq("id", testId)
         .eq("org_id", orgId);
-    
+
       if (error) {
         console.error("[TestRepo.deleteTest] error", error);
-    
+
         if ("code" in error && error.code === "23503") {
           throw new Error(
             "Ce test est utilisé dans un parcours ou un résultat de candidat. Il ne peut pas être supprimé."
           );
         }
-    
+
         throw error;
       }
     },
-  
-    async archiveTest(input: ArchiveTestInput): Promise<void> {
-      const { testId, orgId } = input;
-      console.log("[TestRepo.archiveTest] archiving", { testId, orgId });
 
-      const { error } = await sb
-        .from("tests")
-        .update({ is_active: false })
-        .eq("id", testId)
-        .eq("org_id", orgId);
-
-      if (error) {
-        console.error("[TestRepo.archiveTest] error", error);
-        throw error;
-      }
+    async archiveById(input: { orgId: string; testId: string }): Promise<void> {
+      const { error } = await sb.rpc("archive_test", {
+        p_org_id: input.orgId,
+        p_test_id: input.testId,
+      });
+      if (error) throw error;
     },
 
     async getTestWithQuestions(testId: string, orgId: string) {
@@ -222,46 +241,44 @@ export function makeTestRepo(sb: Db): TestRepo {
         questions: (questions ?? []).map(mapQuestionRow),
       };
     },
-
     async addQuestion(input: CreateQuestionInput): Promise<TestQuestion> {
-      const insert: TablesInsert<"test_questions"> = {
-        org_id: input.orgId,
-        test_id: input.testId,
-        label: input.label,
-        kind: input.kind,
-        min_value: input.minValue ?? null,
-        max_value: input.maxValue ?? null,
-        options: (input.options ?? null) as TablesInsert<"test_questions">["options"],
-        order_index: input.orderIndex ?? 1,
-        is_required: input.isRequired ?? true,
-        business_code: input.businessCode ?? null,
-        dimension_code: input.dimensionCode ?? null,
-        dimension_order: input.dimensionOrder ?? null,
-      };
-
-      const { data, error } = await sb
-        .from("test_questions")
-        .insert(insert)
-        .select("*")
-        .single();
-
+      const dimensionCode = (input.dimensionCode ?? "").trim();
+      if (!dimensionCode) {
+        throw new Error("dimensionCode est obligatoire");
+      }
+      const isScale = input.kind === "scale";
+      const isChoice = input.kind === "choice";
+    
+      const { data, error } = await sb.rpc("add_test_question", {
+        p_org_id: input.orgId,
+        p_test_id: input.testId,
+        p_dimension_code: dimensionCode,
+        p_label: input.label,
+        p_kind: input.kind,
+        p_min_value: isScale ? (input.minValue ?? undefined) : undefined,
+        p_max_value: isScale ? (input.maxValue ?? undefined) : undefined,
+        p_options: isChoice ? (input.options ?? null) : null,
+        p_is_required: input.isRequired ?? true,
+      });
+    
       if (error || !data) {
-        console.error("[TestRepo.addQuestion] insert error", error);
+        console.error("[TestRepo.addQuestion] rpc error", error);
         throw error ?? new Error("Failed to add question");
       }
-
+    
       return mapQuestionRow(data);
     },
-
+    
     async updateQuestion(input: UpdateQuestionInput): Promise<TestQuestion> {
       const patch: TablesUpdate<"test_questions"> = {
         label: input.label,
         kind: input.kind,
-        min_value: input.kind === "scale" ? input.minValue ?? null : null,
-        max_value: input.kind === "scale" ? input.maxValue ?? null : null,
+        min_value: input.kind === "scale" ? (input.minValue ?? null) : null,
+        max_value: input.kind === "scale" ? (input.maxValue ?? null) : null,
         options:
           input.kind === "choice"
-            ? ((input.options ?? null) as TablesUpdate<"test_questions">["options"])
+            ? ((input.options ??
+                null) as TablesUpdate<"test_questions">["options"])
             : null,
         is_required: input.isRequired ?? true,
       };
@@ -281,7 +298,15 @@ export function makeTestRepo(sb: Db): TestRepo {
 
       return mapQuestionRow(data);
     },
-
+    async updateDimensionTitle({ orgId, dimensionId, title }) {
+      const { error } = await sb
+        .from("test_dimensions")
+        .update({ title })
+        .eq("org_id", orgId)
+        .eq("id", dimensionId);
+    
+      if (error) throw error;
+    },
     async reorderQuestions({ orgId, testId, order }) {
       for (const it of order) {
         const { error } = await sb
@@ -290,7 +315,7 @@ export function makeTestRepo(sb: Db): TestRepo {
           .eq("org_id", orgId)
           .eq("test_id", testId)
           .eq("id", it.questionId);
-    
+
         if (error) throw error;
       }
     },
@@ -306,8 +331,42 @@ export function makeTestRepo(sb: Db): TestRepo {
         throw error;
       }
     },
-
-    async startSubmission(input: StartTestSubmissionInput): Promise<TestSubmission> {
+    async getSubmissionById({ orgId, submissionId }) {
+      const { data, error } = await sb
+        .from("test_submissions")
+        .select("*")
+        .eq("org_id", orgId)
+        .eq("id", submissionId)
+        .maybeSingle();
+    
+      if (error) throw error;
+      return data ? mapSubmissionRow(data) : null;
+    },
+    async getSubmissionByCandidateAndFlowItem(input: {
+      orgId: string;
+      candidateId: string;
+      flowItemId: string;
+    }): Promise<TestSubmission | null> {
+      const { data, error } = await sb
+        .from("test_submissions")
+        .select("*")
+        .eq("org_id", input.orgId)
+        .eq("candidate_id", input.candidateId)
+        .eq("flow_item_id", input.flowItemId)
+        .order("submitted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+    
+      if (error) {
+        if ("code" in error && error.code === "PGRST116") return null;
+        throw error;
+      }
+    
+      return data ? mapSubmissionRow(data) : null;
+    },
+    async startSubmission(
+      input: StartTestSubmissionInput
+    ): Promise<TestSubmission> {
       const insert: TablesInsert<"test_submissions"> = {
         org_id: input.orgId,
         test_id: input.testId,
@@ -317,6 +376,8 @@ export function makeTestRepo(sb: Db): TestRepo {
         // submitted_at: laissé au default now()
         numeric_score: null,
         max_score: null,
+        flow_id: input.flowId ?? null,
+        flow_item_id: input.flowItemId ?? null,
       };
 
       const { data, error } = await sb
@@ -332,7 +393,6 @@ export function makeTestRepo(sb: Db): TestRepo {
 
       return mapSubmissionRow(data);
     },
-
     async createSubmissionItems({ orgId, submissionId, items }) {
       if (!items.length) return;
 
@@ -346,9 +406,7 @@ export function makeTestRepo(sb: Db): TestRepo {
         })
       );
 
-      const { error } = await sb
-        .from("test_submission_items")
-        .insert(payload);
+      const { error } = await sb.from("test_submission_items").insert(payload);
 
       if (error) {
         console.error("[TestRepo.createSubmissionItems] insert error", error);
@@ -361,6 +419,28 @@ export function makeTestRepo(sb: Db): TestRepo {
       answers: TestAnswer[];
     }> {
       const { orgId, submissionId, answers, numericScore, maxScore } = input;
+    
+      // 0) Charger la submission (pour idempotence + guard)
+      const { data: existingSubmission, error: sErr } = await sb
+        .from("test_submissions")
+        .select("*")
+        .eq("id", submissionId)
+        .eq("org_id", orgId)
+        .maybeSingle();
+    
+      if (sErr) {
+        console.error("[TestRepo.submitAnswers] fetch submission error", sErr);
+        throw sErr;
+      }
+      if (!existingSubmission) {
+        throw new Error("Submission introuvable.");
+      }
+    
+      // ✅ Guard : déjà complétée → on refuse (ou on peut renvoyer la submission telle quelle)
+      const alreadyCompleted = (existingSubmission as any).completed_at != null;
+      if (alreadyCompleted) {
+        throw new Error("Cette submission est déjà complétée.");
+      }
     
       // 1) Insertion des réponses
       const rows: TablesInsert<"test_answers">[] = answers.map((a) => ({
@@ -381,66 +461,31 @@ export function makeTestRepo(sb: Db): TestRepo {
         throw insertError ?? new Error("Failed to insert test answers");
       }
     
-      // 2) Mise à jour éventuelle du score sur la submission
-      const patch: TablesUpdate<"test_submissions"> = {};
-      if (numericScore !== undefined) patch.numeric_score = numericScore;
-      if (maxScore !== undefined) patch.max_score = maxScore;
+      // 2) Update submission (score + completed_at)
+      const patch: TablesUpdate<"test_submissions"> = {
+        ...(numericScore !== undefined ? { numeric_score: numericScore } : {}),
+        ...(maxScore !== undefined ? { max_score: maxScore } : {}),
+        completed_at: new Date().toISOString(), // ✅ completion
+      } as any;
     
-      let submissionRow: Tables<"test_submissions"> | null = null;
+      const { data: updatedSubmission, error: updErr } = await sb
+        .from("test_submissions")
+        .update(patch)
+        .eq("id", submissionId)
+        .eq("org_id", orgId)
+        .select("*")
+        .single();
     
-      if (Object.keys(patch).length > 0) {
-        const { data, error } = await sb
-          .from("test_submissions")
-          .update(patch)
-          .eq("id", submissionId)
-          .eq("org_id", orgId)
-          .select("*")
-          .single();
-    
-        if (error || !data) {
-          console.error("[TestRepo.submitAnswers] update submission error", error);
-          throw error ?? new Error("Failed to update submission score");
-        }
-    
-        submissionRow = data;
-      } else {
-        const { data, error } = await sb
-          .from("test_submissions")
-          .select("*")
-          .eq("id", submissionId)
-          .eq("org_id", orgId)
-          .single();
-    
-        if (error || !data) {
-          console.error("[TestRepo.submitAnswers] fetch submission error", error);
-          throw error ?? new Error("Failed to fetch submission");
-        }
-    
-        submissionRow = data;
+      if (updErr || !updatedSubmission) {
+        console.error("[TestRepo.submitAnswers] update submission error", updErr);
+        throw updErr ?? new Error("Failed to update submission");
       }
     
-      // 3) Mapping domaine
-      const mappedSubmission: TestSubmission = {
-        id: submissionRow.id,
-        orgId: submissionRow.org_id,
-        testId: submissionRow.test_id,
-        candidateId: submissionRow.candidate_id,
-        offerId: submissionRow.offer_id ?? null,
-        submittedBy: submissionRow.submitted_by ?? null,
-        submittedAt: submissionRow.submitted_at,
-        numericScore: submissionRow.numeric_score ?? null,
-        maxScore: submissionRow.max_score ?? null,
-      };
-    
-     const mappedAnswers = (inserted ?? []).map(mapAnswerRow);
-    
       return {
-        submission: mappedSubmission,
-        answers: mappedAnswers,
+        submission: mapSubmissionRow(updatedSubmission),
+        answers: (inserted ?? []).map(mapAnswerRow),
       };
     },
-    
-
     async listSubmissionsByCandidate(
       candidateId: string,
       orgId: string
@@ -451,12 +496,12 @@ export function makeTestRepo(sb: Db): TestRepo {
         .eq("org_id", orgId)
         .eq("candidate_id", candidateId)
         .order("submitted_at", { ascending: false });
-    
+
       if (error) {
         console.error("[TestRepo.listSubmissionsByCandidate] error", error);
         throw error;
       }
-    
+
       return (data ?? []).map(mapSubmissionRow);
     },
 
@@ -470,7 +515,7 @@ export function makeTestRepo(sb: Db): TestRepo {
       questions: TestQuestion[];
     }> {
       const { submissionId, orgId } = input;
-    
+
       // Submission
       const { data: submissionRow, error: sErr } = await sb
         .from("test_submissions")
@@ -478,12 +523,14 @@ export function makeTestRepo(sb: Db): TestRepo {
         .eq("id", submissionId)
         .eq("org_id", orgId)
         .maybeSingle();
-    
+
       if (sErr) throw sErr;
       if (!submissionRow) {
-        throw new Error("[TestRepo.getSubmissionWithAnswers] submission not found");
+        throw new Error(
+          "[TestRepo.getSubmissionWithAnswers] submission not found"
+        );
       }
-    
+
       // Test
       const { data: testRow, error: tErr } = await sb
         .from("tests")
@@ -491,12 +538,12 @@ export function makeTestRepo(sb: Db): TestRepo {
         .eq("id", submissionRow.test_id)
         .eq("org_id", orgId)
         .maybeSingle();
-    
+
       if (tErr) throw tErr;
       if (!testRow) {
         throw new Error("[TestRepo.getSubmissionWithAnswers] test not found");
       }
-    
+
       // Questions
       const { data: questionsRows, error: qErr } = await sb
         .from("test_questions")
@@ -504,18 +551,18 @@ export function makeTestRepo(sb: Db): TestRepo {
         .eq("test_id", submissionRow.test_id)
         .eq("org_id", orgId)
         .order("order_index");
-    
+
       if (qErr) throw qErr;
-    
+
       // Answers
       const { data: answersRows, error: aErr } = await sb
         .from("test_answers")
         .select("*")
         .eq("submission_id", submissionId)
         .eq("org_id", orgId);
-    
+
       if (aErr) throw aErr;
-    
+
       return {
         submission: mapSubmissionRow(submissionRow),
         test: mapTestRow(testRow),
@@ -523,36 +570,39 @@ export function makeTestRepo(sb: Db): TestRepo {
         answers: (answersRows ?? []).map(mapAnswerRow),
       };
     },
-    
+
     async addReview(input: CreateTestReviewInput): Promise<TestReview> {
       const insert: TablesInsert<"test_reviews"> = {
         submission_id: input.submissionId,
         reviewer_id: input.reviewerId,
         overall_comment: input.overallComment ?? null,
-        axis_comments: (input.axisComments ?? null) as Record<string, string>[] | null,
+        axis_comments: (input.axisComments ?? null) as
+          | Record<string, string>[]
+          | null,
       };
-    
+
       const { data, error } = await sb
         .from("test_reviews")
         .insert(insert)
         .select("*")
         .single();
-    
+
       if (error || !data) {
         console.error("[TestRepo.addReview] error", error);
         throw error ?? new Error("Failed to add review");
       }
-    
+
       return {
         id: data.id,
         submissionId: data.submission_id,
         reviewerId: data.reviewer_id,
         overallComment: data.overall_comment ?? null,
-        axisComments: (data.axis_comments as Record<string, string>[] | null) ?? null,
+        axisComments:
+          (data.axis_comments as Record<string, string>[] | null) ?? null,
         createdAt: data.created_at,
       } as TestReview;
     },
-    
+
     async listReviewsForSubmission(
       submissionId: string,
       _orgId: string
@@ -562,22 +612,170 @@ export function makeTestRepo(sb: Db): TestRepo {
         .select("*")
         .eq("submission_id", submissionId)
         .order("created_at", { ascending: false });
-    
+
       if (error) {
         console.error("[TestRepo.listReviewsForSubmission] error", error);
         throw error;
       }
-    
+
       return (
-        data?.map((row) => ({
+        (data?.map((row) => ({
           id: row.id,
           submissionId: row.submission_id,
           reviewerId: row.reviewer_id,
           overallComment: row.overall_comment ?? null,
-          axisComments: (row.axis_comments as Record<string, string>[] | null) ?? null,
+          axisComments:
+            (row.axis_comments as Record<string, string>[] | null) ?? null,
           createdAt: row.created_at,
-        })) as TestReview[] ?? []
+        })) as TestReview[]) ?? []
       );
     },
-  }
+    async getSubmissionQuestionsWithDisplayIndex({
+      orgId,
+      submissionId,
+    }: {
+      orgId: string;
+      submissionId: string;
+    }): Promise<(TestQuestion & { displayIndex: number })[]> {
+      type JoinedRow = {
+        display_index: number;
+        question: Tables<"test_questions">;
+      };
+
+      const { data, error } = await sb
+        .from("test_submission_items")
+        .select(
+          `
+          display_index,
+          question:test_questions (*)
+        `
+        )
+        .eq("org_id", orgId)
+        .eq("submission_id", submissionId)
+        .order("display_index", { ascending: true });
+
+      if (error) {
+        console.error(
+          "[TestRepo.getSubmissionQuestionsWithDisplayIndex] error",
+          error
+        );
+        throw error;
+      }
+
+      return ((data ?? []) as JoinedRow[]).map((row) => {
+        const qRow = row.question;
+        return {
+          ...mapQuestionRow(qRow),
+          displayIndex: row.display_index,
+        };
+      });
+    },
+    async getTestEditorPayload(testId: string, orgId: string) {
+      const { data: testRow, error: testError } = await sb
+        .from("tests")
+        .select("*")
+        .eq("id", testId)
+        .eq("org_id", orgId)
+        .maybeSingle();
+
+      if (testError) throw testError;
+      if (!testRow) return null;
+
+      const { data: dimensionRows, error: dErr } = await sb
+        .from("test_dimensions")
+        .select("*")
+        .eq("test_id", testId)
+        .eq("org_id", orgId)
+        .order("order_index", { ascending: true });
+
+      if (dErr) throw dErr;
+
+      const { data: questionRows, error: qErr } = await sb
+        .from("test_questions")
+        .select("*")
+        .eq("test_id", testId)
+        .eq("org_id", orgId)
+        .order("dimension_order", { ascending: true })
+        .order("order_index", { ascending: true });
+
+      if (qErr) throw qErr;
+
+      return {
+        test: mapTestRow(testRow),
+        dimensions: (dimensionRows ?? []).map(mapDimensionRow),
+        questions: (questionRows ?? []).map(mapQuestionRow),
+      };
+    },
+    async listDimensionsByTest(
+      testId: string,
+      orgId: string
+    ): Promise<TestDimensionInput[]> {
+      const { data, error } = await sb
+        .from("test_dimensions")
+        .select("*")
+        .eq("test_id", testId)
+        .eq("org_id", orgId)
+        .order("order_index", { ascending: true });
+
+      if (error) throw error;
+
+      return (data ?? []).map((row) => ({
+        id: row.id,
+        orgId: row.org_id,
+        testId: row.test_id,
+        code: row.code,
+        title: row.title,
+        orderIndex: row.order_index,
+        createdAt: row.created_at,
+      }));
+    },
+    async createDimension(
+      input: TestDimensionInput
+    ): Promise<TestDimensionInput> {
+      let code = input.code;
+      let orderIndex = input.orderIndex;
+
+      if (!code || orderIndex == null) {
+        const { data: last, error: lastErr } = await sb
+          .from("test_dimensions")
+          .select("order_index")
+          .eq("org_id", input.orgId)
+          .eq("test_id", input.testId)
+          .order("order_index", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastErr) throw lastErr;
+
+        const next = (last?.order_index ?? 0) + 1;
+        orderIndex = orderIndex ?? next;
+        code = code ?? `D${next}`;
+      }
+
+      const insert: TablesInsert<"test_dimensions"> = {
+        org_id: input.orgId,
+        test_id: input.testId,
+        code,
+        title: input.title ?? code, // fallback
+        order_index: orderIndex ?? 0,
+      };
+
+      const { data, error } = await sb
+        .from("test_dimensions")
+        .insert(insert)
+        .select("*")
+        .single();
+
+      if (error || !data)
+        throw error ?? new Error("Failed to create dimension");
+
+      return {
+        orgId: data.org_id,
+        testId: data.test_id,
+        code: data.code,
+        title: data.title,
+        orderIndex: data.order_index,
+      };
+    },
+  };
 }

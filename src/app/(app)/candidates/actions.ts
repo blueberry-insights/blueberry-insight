@@ -8,12 +8,15 @@ import { makeCreateCandidate } from "@/core/usecases/candidates/createCandidate"
 import { makeUpdateCandidateNote } from "@/core/usecases/candidates/updateCandidateNote";
 import { makeDeleteCandidate } from "@/core/usecases/candidates/deleteCandidate";
 import { makeUpdateCandidate } from "@/core/usecases/candidates/updateCandidate";
+import { makeArchiveCandidate } from "@/core/usecases/candidates/archiveCandidate";
 
 type Ok = { ok: true; candidate: CandidateListItem };
 type Err = { ok: false; error: string };
-
+type ArchiveOk = { ok: true; candidate: CandidateListItem };
+type ArchiveErr = { ok: false; error: string };
 type DeleteOk = { ok: true };
 type DeleteErr = { ok: false; error: string };
+
 
 export type DeleteCandidateResult = DeleteOk | DeleteErr;
 
@@ -227,6 +230,29 @@ export async function deleteCandidateAction(
         ok: false,
         error: "Erreur lors de la suppression du candidat",
       };
+    }
+  });
+}
+
+export async function archiveCandidateAction(
+  formData: FormData
+): Promise<{ ok: true; candidateId: string } | { ok: false; error: string }> {
+  return withAuth(async (ctx) => {
+    const candidateId = String(formData.get("candidateId") ?? "").trim();
+    const orgId = ctx.orgId;
+
+    if (!orgId) return { ok: false, error: "Organisation introuvable pour cet utilisateur" };
+    if (!candidateId) return { ok: false, error: "Candidat introuvable" };
+
+    const repo = makeCandidateRepo(ctx.sb);
+    const archiveCandidate = makeArchiveCandidate(repo);
+
+    try {
+      await archiveCandidate({ orgId, candidateId });
+      return { ok: true, candidateId };
+    } catch (err) {
+      console.error("[archiveCandidateAction] error:", err);
+      return { ok: false, error: "Erreur lors de l'archivage du candidat" };
     }
   });
 }

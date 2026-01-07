@@ -2,7 +2,7 @@
 import { requireUserAndOrgForPage } from "@/infra/supabase/session";
 import { makeTestFlowRepo } from "@/infra/supabase/adapters/testFlow.repo.supabase";
 import { makeTestRepo } from "@/infra/supabase/adapters/test.repo.supabase";
-import { makeGetOfferTestFlowWithQuestions } from "@/core/usecases/tests/getOfferTestFlowWithQuestions";
+import { makeGetOfferTestFlowWithQuestions } from "@/core/usecases/tests/flows/getOfferTestFlowWithQuestions";
 import { TestOfferScreen } from "@/features/tests/components/screens/TestOfferScreen";
 
 export default async function OfferTestsPage({

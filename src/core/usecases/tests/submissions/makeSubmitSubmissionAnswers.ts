@@ -1,7 +1,7 @@
 // core/usecases/makeSubmitSubmissionAnswers.ts
 import type { TestRepo } from "@/core/ports/TestRepo";
 import type { TestInviteRepo } from "@/core/ports/TestInviteRepo";
-import { computeMotivationScore } from "./computeMotivationScore";
+import { computeMotivationScore } from "../scoring/computeMotivationScore";
 import type { TestQuestion } from "@/core/models/Test";
 
 export class SubmitSubmissionError extends Error {

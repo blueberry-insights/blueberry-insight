@@ -115,7 +115,7 @@ export function OfferTable({ offers, onEditRequest, onDeleteRequest }: Props) {
                         onSelect={() => onDeleteRequest(o)}
                       >
                         <Trash className="mr-2 h-4 w-4" />
-                        Supprimer l&apos;offre
+                        Archiver l&apos;offre
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link

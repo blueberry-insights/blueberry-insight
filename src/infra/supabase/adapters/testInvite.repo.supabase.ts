@@ -62,9 +62,14 @@ export function makeTestInviteRepo(sb: Db): TestInviteRepo {
         .eq("token", token)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("[TestInviteRepo.getByToken] error", error);
+        throw error;
+      }
       if (!data) return null;
-      return mapInviteRow(data);
+      const invite = mapInviteRow(data);
+      console.log("[TestInviteRepo.getByToken] invite récupérée, flowItemId:", invite.flowItemId);
+      return invite;
     },
 
     async linkSubmission(input: LinkSubmissionToInviteInput): Promise<void> {

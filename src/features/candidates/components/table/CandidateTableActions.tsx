@@ -12,14 +12,14 @@ import type { CandidateListItem } from "@/core/models/Candidate";
 type Props = {
   candidate: CandidateListItem;
   onEditNote?: (candidate: CandidateListItem) => void;
-  onDeleteRequest?: (candidate: CandidateListItem) => void;
+  onArchiveRequest?: (candidate: CandidateListItem) => void;
   onUpdateRequest?: (candidate: CandidateListItem) => void;
 };
 
 export function CandidateTableActions({
   candidate,
   onEditNote,
-  onDeleteRequest,
+  onArchiveRequest,
   onUpdateRequest,
 }: Props) {
   return (
@@ -73,18 +73,18 @@ export function CandidateTableActions({
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => {
-              if (onDeleteRequest) {
-                onDeleteRequest(candidate);
+              if (onArchiveRequest) {
+                onArchiveRequest(candidate);
               } else {
                 console.error(
-                  "[CandidateTableActions] onDeleteRequest is undefined!"
+                  "[CandidateTableActions] onArchiveRequest is undefined!"
                 );
               }
             }}
             className="flex items-center gap-2 text-sm text-red-600 focus:text-red-700"
           >
             <Trash2 className="h-4 w-4" />
-            <span>Supprimer</span>
+            <span>Archiver</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

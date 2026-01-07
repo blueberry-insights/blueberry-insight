@@ -1,6 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/infra/supabase/types/Database";
+import { env } from "@/config/env";
 
 // Singleton pour éviter les multiples instances
 // Cela empêche plusieurs instances du client de tenter de rafraîchir le token simultanément
@@ -12,8 +13,8 @@ export const supabaseBrowser = () => {
   }
 
   client = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       // Utilise les cookies par défaut (même stockage que le serveur)
       // @supabase/ssr gère automatiquement la lecture/écriture des cookies

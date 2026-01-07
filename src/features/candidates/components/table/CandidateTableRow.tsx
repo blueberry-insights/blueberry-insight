@@ -9,7 +9,7 @@ type Props = {
   candidate: CandidateListItem;
   offer: OfferListItem | null;
   onEditNote?: (candidate: CandidateListItem) => void;
-  onDeleteRequest?: (candidate: CandidateListItem) => void;
+  onArchiveRequest?: (candidate: CandidateListItem) => void;
   onUpdateRequest?: (candidate: CandidateListItem) => void;
   onStatusUpdated?: (
     candidateId: string,
@@ -28,7 +28,7 @@ export function CandidateTableRow({
   candidate,
   offer,
   onEditNote,
-  onDeleteRequest,
+  onArchiveRequest,
   onUpdateRequest,
   onStatusUpdated,
 }: Props) {
@@ -95,7 +95,7 @@ export function CandidateTableRow({
       <CandidateTableActions
         candidate={candidate}
         onEditNote={onEditNote}
-        onDeleteRequest={onDeleteRequest}
+        onArchiveRequest={onArchiveRequest}
         onUpdateRequest={onUpdateRequest}
       />
     </tr>

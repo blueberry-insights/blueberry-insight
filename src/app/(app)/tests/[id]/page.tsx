@@ -11,8 +11,7 @@ export default async function TestEditorPage({ params }: Params) {
 
   const ctx = await requireUserAndOrgForPage(`/tests/${testId}`);
   const repo = makeTestRepo(ctx.sb);
-  const payload = await repo.getTestWithQuestions(testId, ctx.orgId);
-
+  const payload = await repo.getTestEditorPayload(testId, ctx.orgId);
   if (!payload) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
@@ -23,6 +22,7 @@ export default async function TestEditorPage({ params }: Params) {
 
   return (
     <TestEditorScreen
+      dimensions={payload.dimensions}
       test={payload.test}
       questions={payload.questions}
     />

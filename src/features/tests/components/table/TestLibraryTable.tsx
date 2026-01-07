@@ -7,13 +7,11 @@ type Props = {
   onUpdateRequest?: (test: Test) => void;
   onArchiveRequest?: (test: Test) => void;
   onDuplicateRequest?: (test: Test) => void;
-  onDeleteRequest?: (test: Test) => void;
   duplicatePending?: boolean;
-  deletePending?: boolean;
   archivePending?: boolean;
 };
 
-export function TestLibraryTable({ tests, onUpdateRequest, onDuplicateRequest, onDeleteRequest, deletePending, onArchiveRequest, archivePending }: Props) {
+export function TestLibraryTable({ tests, onUpdateRequest, onDuplicateRequest, onArchiveRequest, archivePending }: Props) {
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
       <table className="w-full text-sm">
@@ -34,8 +32,6 @@ export function TestLibraryTable({ tests, onUpdateRequest, onDuplicateRequest, o
               onUpdateRequest={onUpdateRequest}
               onArchiveRequest={onArchiveRequest}
               onDuplicateRequest={onDuplicateRequest}
-              onDeleteRequest={onDeleteRequest}
-              deletePending={deletePending}
               archivePending={archivePending}
             />
           ))}

@@ -3,9 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { withAuth } from "@/infra/supabase/session";
 import { makeTestRepo } from "@/infra/supabase/adapters/test.repo.supabase";
-import { makeCreateQuestion } from "@/core/usecases/tests/createQuestion";
-import { makeUpdateQuestion } from "@/core/usecases/tests/updateQuestion";
-import { makeReorderQuestions } from "@/core/usecases/tests/reorderQuestions";
+import { makeReorderQuestions, makeCreateQuestion, makeUpdateQuestion } from "@/core/usecases/tests";
 
 type Err = { ok: false; error: string };
 type Ok<T> = { ok: true; data: T };
@@ -18,9 +16,13 @@ export async function createQuestionAction(
       const testId = String(formData.get("testId") ?? "").trim();
       const label = String(formData.get("label") ?? "").trim();
       const kind = String(formData.get("kind") ?? "").trim();
+      const dimensionCode = String(formData.get("dimensionCode") ?? "").trim();
+      const dimensionOrder = formData.get("dimensionOrder")
+        ? Number(formData.get("dimensionOrder"))
+        : undefined;
 
-      if (!testId || !label || !kind) {
-        return { ok: false, error: "testId, libellé et type sont obligatoires" };
+      if (!testId || !label || !kind  || !dimensionCode) {
+        return { ok: false, error: "testId, libellé, type et dimensionCode sont obligatoires" };
       }
 
       const raw = {
@@ -43,6 +45,8 @@ export async function createQuestionAction(
             .filter(Boolean);
         })(),
         isRequired: String(formData.get("isRequired") ?? "true") === "true",
+        dimensionCode: dimensionCode || undefined,
+        dimensionOrder: dimensionOrder || undefined,
       };
 
       const repo = makeTestRepo(ctx.sb);
@@ -163,6 +167,68 @@ export async function reorderQuestionsAction(formData: FormData) {
     } catch (e) {
       console.error("[reorderQuestionsAction]", e);
       return { ok: false, error: "Erreur lors du reorder" };
+    }
+  });
+}
+export async function createDimensionAction(formData: FormData) {
+  return withAuth(async (ctx) => {
+    try {
+      const testId = String(formData.get("testId") ?? "").trim();
+      const title = String(formData.get("title") ?? "").trim();
+
+      if (!testId || !title) {
+        return { ok: false, error: "testId et title sont obligatoires" };
+      }
+
+      const repo = makeTestRepo(ctx.sb);
+
+      const existing = await repo.listDimensionsByTest?.(testId, ctx.orgId);
+
+
+      const nextIndex = (existing?.at(-1)?.orderIndex ?? 0) + 1;
+      const nextCode = `D${nextIndex}`;
+
+      const created = await repo.createDimension({
+        orgId: ctx.orgId,
+        testId,
+        code: nextCode,
+        title,
+        orderIndex: nextIndex,
+      });
+
+      revalidatePath(`/tests/${testId}`);
+      return { ok: true, data: created };
+    } catch (e) {
+      console.error("[createDimensionAction]", e);
+      return { ok: false, error: "Erreur lors de la création de la thématique" };
+    }
+  });
+}
+export async function updateDimensionTitleAction(
+  formData: FormData
+): Promise<Ok<null> | Err> {
+  return withAuth(async (ctx) => {
+    try {
+      const testId = String(formData.get("testId") ?? "").trim();
+      const dimensionId = String(formData.get("dimensionId") ?? "").trim();
+      const title = String(formData.get("title") ?? "").trim();
+
+      if (!testId || !dimensionId || !title) {
+        return { ok: false, error: "testId, dimensionId et title sont obligatoires" };
+      }
+
+      const repo = makeTestRepo(ctx.sb);
+      await repo.updateDimensionTitle({
+        orgId: ctx.orgId,
+        dimensionId,
+        title,
+      });
+
+      revalidatePath(`/tests/${testId}`);
+      return { ok: true, data: null };
+    } catch (e) {
+      console.error("[updateDimensionTitleAction]", e);
+      return { ok: false, error: "Erreur lors du renommage de la dimension" };
     }
   });
 }

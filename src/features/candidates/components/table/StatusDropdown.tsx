@@ -13,6 +13,17 @@ import { updateCandidateStatusAction } from "@/app/(app)/candidates/actions";
 import { useToast } from "@/shared/hooks/useToast";
 import { ChevronDown } from "lucide-react";
 
+const STATUS_LABELS: Record<string, string> = {
+  new: "Nouveau",
+  screening: "En évaluation",
+  test: "Test en cours",
+  interview: "Entretien planifié",
+  offer: "Offre proposée",
+  hired: "Recruté",
+  rejected: "Refusé",
+  archived: "Archivé",
+};
+
 type Props = {
   candidateId: string;
   currentStatus: CandidateStatus | null;
@@ -62,7 +73,7 @@ export function StatusDropdown({
         disabled={pending}
         className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary/20 disabled:opacity-50 ${statusClasses}`}
       >
-        <span>{currentStatus || "—"}</span>
+        <span>{STATUS_LABELS[currentStatus as keyof typeof STATUS_LABELS] || "—"}</span>
         <ChevronDown className="h-3 w-3 opacity-60" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[160px]">
@@ -77,7 +88,7 @@ export function StatusDropdown({
               className={`cursor-pointer ${isSelected ? "bg-accent font-semibold" : ""}`}
             >
               <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${itemClasses}`}>
-                {status}
+                {STATUS_LABELS[status as keyof typeof STATUS_LABELS] || "—"}
               </span>
             </DropdownMenuItem>
           );
