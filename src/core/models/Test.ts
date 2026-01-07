@@ -101,7 +101,7 @@ export interface TestReview {
   submissionId: string;
   reviewerId: string;
   overallComment?: string | null;
-  axisComments?: TestReviewAxisComment[] | null;
+  axisComments?: Record<string, string>[] | null;
   createdAt: string; // ISO date
 }
 

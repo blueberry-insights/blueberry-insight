@@ -45,9 +45,8 @@ export default async function CandidateTestPage({ params }: PageProps) {
     );
   }
 
-  // Si c'est un flow, utiliser CandidateFlowClient
   if (json.data.type === "flow") {
-    const { flow, items, currentItemIndex, currentItem } = json.data;
+    const { flow, items, currentItemIndex } = json.data;
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -57,7 +56,6 @@ export default async function CandidateTestPage({ params }: PageProps) {
             flow={flow}
             items={items}
             currentItemIndex={currentItemIndex}
-            currentItem={currentItem}
           />
         </div>
       </div>

@@ -44,7 +44,7 @@ const invites = await listCandidateInvites({
 
   let offer = null;
   let offers: OfferListItem[] | null = null;
-  let testFlowInfoMap: Record<string, TestFlowItemInfo> = {};
+  const testFlowInfoMap: Record<string, TestFlowItemInfo> = {};
   
   if (candidate.offerId) {
     const rawOffers = await offerRepo.listByOrg(orgId);

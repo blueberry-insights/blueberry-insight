@@ -4,7 +4,7 @@
 import { useMemo, useState } from "react";
 import type { TestFlow } from "@/core/models/TestFlow";
 import type { TestQuestion } from "@/core/models/Test";
-import type { FlowItemWithContent } from "@/core/usecases/tests/";
+import type { FlowItemWithContent } from "@/core/usecases/tests";
 import {
   groupQuestionsByDimension,
   shouldGroupByDimension,
@@ -36,10 +36,8 @@ export default function CandidateFlowClient({
 }: Props) {
   const [currentIndex, setCurrentIndex] = useState(currentItemIndex);
 
-  // ✅ Réponses conservées par item
   const [answersByItemId, setAnswersByItemId] = useState<AnswersByItemId>({});
 
-  // ✅ IMPORTANT : submitted conservé par item (sinon ça pollue les autres étapes)
   const [submittedByItemId, setSubmittedByItemId] = useState<SubmittedByItemId>(
     {}
   );
