@@ -5,6 +5,17 @@ type Props = {
   className?: string;
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  new: "Nouveau",
+  screening: "En évaluation",
+  test: "Test en cours",
+  interview: "Entretien planifié",
+  offer: "Offre proposée",
+  hired: "Recruté",
+  rejected: "Refusé",
+  archived: "Archivé",
+};
+
 export function CandidateStatusBadge({ status, className = "" }: Props) {
   return (
     <span
@@ -12,7 +23,7 @@ export function CandidateStatusBadge({ status, className = "" }: Props) {
         status
       )} ${className}`}
     >
-      {status || "—"}
+      {STATUS_LABELS[status as keyof typeof STATUS_LABELS] || "—"}
     </span>
   );
 }

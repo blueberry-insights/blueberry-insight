@@ -4,6 +4,7 @@ import type {
   CandidateRepo,
   CreateCandidateInput,
   UpdateCandidateInput,
+  ArchiveCandidateByIdInput,
 } from "@/core/ports/CandidateRepo";
 import type {
   CandidateListItem,
@@ -18,17 +19,17 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
       const { data, error } = await sb
         .from("candidates")
         .select(
-          "id, full_name, email, phone, location, candidate_ref, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at"
+          "id, full_name, email, phone, location, candidate_ref, status, source, tags, note, created_at, offer_id, cv_path, cv_original_name, cv_mime_type, cv_size_bytes, cv_uploaded_at, archived_at"
         )
         .eq("org_id", orgId)
+        .is("archived_at", null) 
         .order("created_at", { ascending: false });
-
+    
       if (error) throw error;
-
+    
       return (data ?? []).map((row) => ({
         id: row.id,
         fullName: row.full_name,
-        offerId: row.offer_id ?? null,
         email: row.email,
         phone: row.phone ?? null,
         location: row.location ?? null,
@@ -37,7 +38,8 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         source: row.source ?? null,
         tags: row.tags ?? [],
         note: row.note ?? null,
-        createdAt: row.created_at ?? new Date().toISOString(),
+        createdAt: row.created_at,
+        offerId: row.offer_id ?? null,
         cvPath: row.cv_path ?? null,
         cvOriginalName: row.cv_original_name ?? null,
         cvMimeType: row.cv_mime_type ?? null,
@@ -262,6 +264,14 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         cvUploadedAt: data.cv_uploaded_at ?? null,
       };
     },
+    async archiveById({ orgId, candidateId }: ArchiveCandidateByIdInput) {
+      const { error } = await sb.rpc("archive_candidate", {
+        p_org_id: orgId,
+        p_candidate_id: candidateId,
+      });
+    
+      if (error) throw error;
+    },
     async deleteById(input: {
       orgId: string;
       candidateId: string;
@@ -276,6 +286,21 @@ export function makeCandidateRepo(sb: Db): CandidateRepo {
         console.error("[CandidateRepo.deleteById] error", error);
         throw error;
       }
+    },
+    async updateCandidateStatus(input: {
+      orgId: string;
+      candidateId: string;
+      status: CandidateStatus;
+    }): Promise<void> {
+      const { orgId, candidateId, status } = input;
+    
+      const { error } = await sb
+        .from("candidates")
+        .update({ status })
+        .eq("org_id", orgId)
+        .eq("id", candidateId);
+    
+      if (error) throw error;
     },
     async attachCv({
       orgId,

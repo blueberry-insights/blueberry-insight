@@ -1,40 +1,39 @@
 "use client";
 
-import * as React from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { TestQuestion } from "@/core/models/Test";
 import { useToast } from "@/shared/hooks/useToast";
 import {
   updateQuestionAction,
   deleteQuestionAction,
-  reorderQuestionsAction,
 } from "@/app/(app)/tests/[id]/action";
 import { TestQuestionRow } from "./table/TestQuestionRow";
-import { QuestionsSortableList } from "./table/QuestionSortableList";
-import { GripVertical } from "lucide-react";
 
 type Props = {
   testId: string;
   questions: TestQuestion[];
+  onDeleteLocal: (id: string) => void;
 };
 
-export function TestQuestionsEditor({ testId, questions }: Props) {
+export function TestQuestionsEditor({ testId, questions, onDeleteLocal }: Props) {
+  const router = useRouter();
   const { toast } = useToast();
-  const [localQuestions, setLocalQuestions] =
-    React.useState<TestQuestion[]>(questions);
 
-  React.useEffect(() => {
-    setLocalQuestions(questions);
+  const [localQuestions, setLocalQuestions] = useState<TestQuestion[]>(questions);
+
+  useEffect(() => {
+    const incomingIds = questions.map((q) => q.id).join("|");
+    const localIds = localQuestions.map((q) => q.id).join("|");
+
+    if (incomingIds !== localIds) {
+      setLocalQuestions(questions);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questions]);
 
-  // IMPORTANT: snapshot stable pour rollback dans async
-  const snapshotRef = React.useRef<TestQuestion[]>(questions);
-  React.useEffect(() => {
-    snapshotRef.current = localQuestions;
-  }, [localQuestions]);
-
   async function onUpdate(questionId: string, patch: Partial<TestQuestion>) {
-    const snapshot = snapshotRef.current;
-
+    const snapshot = localQuestions;
     // optimistic
     setLocalQuestions((prev) =>
       prev.map((q) => (q.id === questionId ? { ...q, ...patch } : q))
@@ -46,8 +45,13 @@ export function TestQuestionsEditor({ testId, questions }: Props) {
     const fd = new FormData();
     fd.set("testId", testId);
     fd.set("questionId", questionId);
-    fd.set("label", String(patch.label ?? target.label));
-    fd.set("kind", String(patch.kind ?? target.kind));
+
+    // garde dimension si pas touchée
+    fd.set("dimensionCode", String(patch.dimensionCode ?? target.dimensionCode ?? ""));
+    fd.set("dimensionOrder", String(patch.dimensionOrder ?? target.dimensionOrder ?? ""));
+
+    fd.set("label", String(patch.label ?? target.label ?? ""));
+    fd.set("kind", String(patch.kind ?? target.kind ?? ""));
 
     const kind = patch.kind ?? target.kind;
 
@@ -69,10 +73,13 @@ export function TestQuestionsEditor({ testId, questions }: Props) {
     }
 
     const res = await updateQuestionAction(fd);
+
     if (!res.ok) {
-      setLocalQuestions(snapshot); // rollback
-      const msg = res.error ?? "Erreur lors de la mise à jour";
-      toast.error({ title: "Erreur", description: msg });
+      setLocalQuestions(snapshot); 
+      toast.error({
+        title: "Erreur",
+        description: res.error ?? "Erreur lors de la mise à jour",
+      });
       return;
     }
 
@@ -80,81 +87,98 @@ export function TestQuestionsEditor({ testId, questions }: Props) {
       title: "Question mise à jour",
       description: "Modifications enregistrées.",
     });
+
+    // ✅ sync serveur (plus de refresh manuel)
+    router.refresh();
   }
 
-  async function onDelete(questionId: string) {
-    const snapshot = snapshotRef.current;
+  async function onDelete(questionId: string, dimensionCode?: string | null) {
+    const snapshot = localQuestions;
 
-    // optimistic
     setLocalQuestions((prev) => prev.filter((q) => q.id !== questionId));
 
     const fd = new FormData();
     fd.set("testId", testId);
     fd.set("questionId", questionId);
-
+    fd.set("dimensionCode", dimensionCode ?? "");
     const res = await deleteQuestionAction(fd);
+
     if (!res.ok) {
       setLocalQuestions(snapshot); // rollback
-      const msg = res.error ?? "Impossible de supprimer la question.";
-      toast.error({ title: "Erreur", description: msg });
+      toast.error({
+        title: "Erreur",
+        description: res.error ?? "Impossible de supprimer la question.",
+      });
       return;
     }
+
+    // ✅ only after success, notify parent (évite les effets “parent écrase”)
+    onDeleteLocal?.(questionId);
 
     toast.success({
       title: "Question supprimée",
       description: "La question a été retirée du test.",
     });
+
+    // ✅ sync serveur
+    router.refresh();
   }
 
-  // tu peux garder ce tri si tu veux, mais du coup il faut que reorder mette à jour orderIndex
-  const sorted = React.useMemo(
-    () => [...localQuestions].sort((a, b) => a.orderIndex - b.orderIndex),
-    [localQuestions]
-  );
+  const grouped = useMemo(() => {
+    const getDimKey = (q: TestQuestion) => q.dimensionCode?.trim() || "D?";
+
+    const map = new Map<
+      string,
+      { dimCode: string; dimOrder: number; items: TestQuestion[] }
+    >();
+
+    for (const q of localQuestions) {
+      const dimCode = getDimKey(q);
+      const dimOrder = q.dimensionOrder ?? 999;
+
+      const entry = map.get(dimCode) ?? { dimCode, dimOrder, items: [] };
+      entry.items.push(q);
+      entry.dimOrder = Math.min(entry.dimOrder, dimOrder);
+
+      map.set(dimCode, entry);
+    }
+
+    for (const g of map.values()) {
+      g.items.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    }
+
+    // ✅ tri des dimensions
+    return [...map.values()].sort((a, b) => {
+      if (a.dimOrder !== b.dimOrder) return a.dimOrder - b.dimOrder;
+      return a.dimCode.localeCompare(b.dimCode);
+    });
+  }, [localQuestions]);
 
   return (
-    <div className="space-y-2">
-      <QuestionsSortableList
-        items={sorted}
-        onReorderLocal={setLocalQuestions}
-        onReorderPersist={async (next) => {
-          const fd = new FormData();
-          fd.set("testId", testId);
-          fd.set(
-            "order",
-            JSON.stringify(
-              next.map((q, idx) => ({ questionId: q.id, orderIndex: idx + 1 }))
-            )
-          );
-          const res = await reorderQuestionsAction(fd);
-          if (!res.ok) throw new Error(res.error ?? "reorder failed");
-        }}
-        renderItem={(q, index, { dragHandleProps }) => (
-          <div
-            className="flex items-start gap-3 border rounded-lg px-3 py-2"
-            key={q.id}
-          >
-            <button
-              type="button"
-              {...dragHandleProps}
-              className="mt-1 cursor-grab text-slate-400 hover:text-slate-600 active:cursor-grabbing"
-              aria-label="Réordonner la question"
-            >
-              <GripVertical className="h-4 w-4" />
-            </button>
+    <div className="space-y-4">
+      {grouped.map((group) => (
+        <div key={group.dimCode} className="space-y-2">
+          <div className="text-sm font-semibold text-slate-900">{group.dimCode}</div>
 
-            <div className="flex-1">
-              <TestQuestionRow
+          <div className="space-y-2">
+            {group.items.map((q, index) => (
+              <div
                 key={q.id}
-                index={index}
-                question={q}
-                onUpdate={onUpdate}
-                onDelete={onDelete}
-              />
-            </div>
+                className="flex items-start gap-3 border rounded-lg px-3 py-2"
+              >
+                <div className="flex-1">
+                  <TestQuestionRow
+                    index={index}
+                    question={q}
+                    onUpdate={onUpdate}
+                    onDelete={() => onDelete(q.id, q.dimensionCode)}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      />
+        </div>
+      ))}
     </div>
   );
 }

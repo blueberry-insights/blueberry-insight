@@ -7,4 +7,5 @@ export interface Org {
 export interface OrgRepo {
   findBySlug(slug: string): Promise<Org | null>;
   create(name: string, slug: string, createdBy: string): Promise<Org>;
+  getById(orgId: string): Promise<Org | null>;
 }

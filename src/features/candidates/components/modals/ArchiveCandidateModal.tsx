@@ -10,16 +10,16 @@ type Props = {
   offers: OfferListItem[];
   isSubmitting: boolean;
   onClose: () => void;
-  onDeleted: () => void;
+  onArchived: () => void;
 };
 
-export function DeleteCandidateModal({
+export function ArchiveCandidateModal({
   open,
   candidate,
   offers,
   isSubmitting,
   onClose,
-  onDeleted,
+  onArchived,
 }: Props) {
   if (!open || !candidate) return null;
 
@@ -29,14 +29,14 @@ export function DeleteCandidateModal({
       : "l'offre associée";
 
   return (
-    <AppModal open={open} onClose={onClose} isBusy={isSubmitting} title="Supprimer ce candidat ?">
+    <AppModal open={open} onClose={onClose} isBusy={isSubmitting} title="Archiver ce candidat ?">
         <p className="mb-4 text-sm text-slate-600">
-          Vous êtes sur le point de supprimer{" "}
+          Vous êtes sur le point d&apos;archiver{" "}
           <span className="font-semibold">{candidate.fullName}</span>{" "}
           au poste de{" "}
           <span className="font-semibold">{offerTitle}</span>.{" "}
-          Cette action est <span className="font-semibold">définitive</span> et
-          supprimera également son CV s&apos;il est présent.
+          Le candidat sera retiré des listes par défaut.{" "}
+          Les données (y compris le CV s&apos;il existe) restent conservées pour l&apos;historique.
         </p>
 
         <div className="flex justify-end gap-2">
@@ -50,11 +50,11 @@ export function DeleteCandidateModal({
           </button>
           <button
             type="button"
-            onClick={onDeleted}
+            onClick={onArchived}
             disabled={isSubmitting}
-            className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+            className="rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-600 disabled:opacity-60"
           >
-            {isSubmitting ? "Suppression..." : "Supprimer le candidat"}
+            {isSubmitting ? "Archivage..." : "Archiver le candidat"}
           </button>
         </div>
       </AppModal>

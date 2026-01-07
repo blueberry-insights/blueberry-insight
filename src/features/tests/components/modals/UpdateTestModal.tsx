@@ -21,7 +21,7 @@ export function UpdateTestModal({ open, onClose, test, onUpdated }: Props) {
       name: test?.name ?? "",
       description: test?.description ?? "",
     }),
-    [test?.id, test?.name, test?.description]
+    [test?.name, test?.description]
   );
 
   const [values, setValues] = useState(initialValues);

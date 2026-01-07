@@ -4,6 +4,8 @@ import { supabaseServerRSC } from "@/infra/supabase/client";
 import { makeCandidateRepo } from "@/infra/supabase/adapters/candidate.repo.supabase";
 import { CandidatesScreen } from "@/features/candidates/components";
 import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
+import { makeUserInfoRepoForAction } from "@/infra/supabase/composition";
+import { makeEnrichOffersWithUserNames } from "@/core/usecases/offers/enrichOffersWithUserNames";
 
 export default async function CandidatesPage() {
   const { orgId } = await requireUserAndOrgForPage("/candidates");
@@ -17,9 +19,13 @@ export default async function CandidatesPage() {
     offerRepo.listByOrg(orgId),
   ]);
 
+  const userInfoRepo = makeUserInfoRepoForAction();
+  const enrichOffers = makeEnrichOffersWithUserNames(userInfoRepo);
+  const enrichedOffers = await enrichOffers(offers);
+
   return <CandidatesScreen
     orgId={orgId}
     initialCandidates={candidates}
-    offers={offers}
+    offers={enrichedOffers}
   />;
 }

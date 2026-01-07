@@ -55,10 +55,10 @@ export function TestFlowEditor({ offerId, flow, items, tests }: Props) {
 
   const nextOrderIndex = (sorted.at(-1)?.orderIndex ?? 0) + 1;
 
-  // panneau “ajouter un bloc”
+  // panneau "ajouter un bloc"
   const [mode, setMode] = React.useState<AddMode>("video");
   const [pendingAdd, startAdd] = React.useTransition();
-  const [pendingDeleteId, startDelete] = React.useTransition();
+  const [, startDelete] = React.useTransition();
   const [title, setTitle] = React.useState("");
   const [videoUrl, setVideoUrl] = React.useState("");
   const [selectedTestId, setSelectedTestId] = React.useState("");

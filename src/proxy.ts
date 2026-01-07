@@ -1,14 +1,23 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { env } from "@/config/env";
 
-const USER = process.env.BASIC_AUTH_USER;
-const PASS = process.env.BASIC_AUTH_PASS;
+const USER = env.BASIC_AUTH_USER;
+const PASS = env.BASIC_AUTH_PASS;
 
-export function  proxy(req: NextRequest) {
+export function proxy(req: NextRequest) {
   // Si pas de config → on laisse tout passer (pratique en local)
   if (!USER || !PASS) return NextResponse.next();
 
   const { pathname } = req.nextUrl;
+
+  // ✅ On laisse passer le tunnel candidat SANS Basic Auth
+  if (
+    pathname.startsWith("/candidate/test") ||
+    pathname.startsWith("/api/candidate/test")
+  ) {
+    return NextResponse.next();
+  }
 
   // Laisse passer les assets statiques & Next internals
   if (
@@ -19,8 +28,7 @@ export function  proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Laisse passer les routes d'authentification (login, register, callback, reset, verify)
-  // Sinon le Basic Auth bloque les callbacks Supabase
+  // Laisse passer les routes d'authentification
   if (
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
@@ -56,7 +64,7 @@ export function  proxy(req: NextRequest) {
   });
 }
 
-// Applique le middleware partout sauf assets
+// Applique le proxy partout (on peut garder le matcher comme ça)
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)", "/api/candidate/test/:path*"],
 };

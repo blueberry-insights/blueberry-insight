@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseServerAction } from "@/infra/supabase/client";
+import { env } from "@/config/env";
 
 export async function resendSignupEmail(formData: FormData) {
   const email = String(formData.get("email") || "").trim().toLowerCase();
@@ -8,7 +9,7 @@ export async function resendSignupEmail(formData: FormData) {
 
   const sb = await supabaseServerAction();
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const appUrl = env.NEXT_PUBLIC_APP_URL?.trim();
   const emailRedirectTo =
     appUrl && appUrl.startsWith("http")
       ? `${appUrl}/auth/callback?flow=signup&email=${encodeURIComponent(email)}`

@@ -7,7 +7,6 @@ import {
   Copy,
   Pencil,
   Loader2,
-  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,9 +23,7 @@ type Props = {
   onUpdateRequest?: (test: Test) => void;
   onArchiveRequest?: (test: Test) => void;
   onDuplicateRequest?: (test: Test) => void;
-  onDeleteRequest?: (test: Test) => void;
   duplicatePending?: boolean;
-  deletePending?: boolean;
   archivePending?: boolean;
 };
 
@@ -66,10 +63,8 @@ export function TestLibraryTableActions({
   test,
   onUpdateRequest,
   onDuplicateRequest,
-  onDeleteRequest,
   onArchiveRequest,
   duplicatePending,
-  deletePending,
   archivePending,
 }: Props) {
   return (
@@ -124,20 +119,6 @@ export function TestLibraryTableActions({
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
-
-          <DropdownMenuItem asChild>
-            <ItemButton
-              disabled={!onDeleteRequest || deletePending}
-              onAction={() => onDeleteRequest?.(test)}
-              className="text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span>Supprimer</span>
-              {deletePending && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
-            </ItemButton>
-          </DropdownMenuItem>
 
           <DropdownMenuItem asChild>
             <ItemButton

@@ -11,7 +11,7 @@ export function OfferDescriptionSection({ offer }: Props) {
         Description du poste
       </h2>
       {offer.description ? (
-        <p className="whitespace-pre-wrap text-sm text-slate-700">
+        <p className="whitespace-pre-wrap wrap-break-word text-sm text-slate-700">
           {offer.description}
         </p>
       ) : (

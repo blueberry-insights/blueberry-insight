@@ -1,6 +1,6 @@
 // infra/supabase/repos/org.repo.supabase.ts
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { OrgRepo } from "@/core/ports/OrgRepo";
+import type { Org, OrgRepo } from "@/core/ports/OrgRepo";
 import { randomUUID } from "node:crypto";
 
 export function makeOrgRepo(sb: SupabaseClient): OrgRepo {
@@ -26,6 +26,15 @@ export function makeOrgRepo(sb: SupabaseClient): OrgRepo {
 
       // On retourne ce qu’on sait déjà (pas besoin de SELECT)
       return { id, name, slug, createdBy };
+    },
+    async getById(orgId: string): Promise<Org | null> {
+      const { data, error } = await sb
+        .from("organizations")
+        .select("id, name, slug, created_by")
+        .eq("id", orgId)
+        .single();
+      if (error) return null;
+      return { id: data.id, name: data.name, slug: data.slug, createdBy: data.created_by};
     },
   };
 }

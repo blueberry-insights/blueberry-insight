@@ -1,12 +1,12 @@
-import type { TestRepo } from "@/core/ports/TestRepo";
-import type { TestInviteRepo } from "@/core/ports/TestInviteRepo";
+// core/usecases/tests/startSubmissionFromInvite.ts
 import type {
+  Test,
   TestQuestion,
   TestSubmission,
-  Test,
 } from "@/core/models/Test";
+import type { TestInviteRepo } from "@/core/ports/TestInviteRepo";
+import type { TestRepo } from "@/core/ports/TestRepo";
 
-// Petite erreur métier "typed" (optionnel mais propre)
 export class StartSubmissionError extends Error {
   code:
     | "INVITE_NOT_FOUND"
@@ -40,16 +40,14 @@ export function makeStartSubmissionFromInvite(deps: {
 }) {
   const { testRepo, inviteRepo } = deps;
 
-  return async function startSubmissionFromInvite(
-    input: {
-      orgId: string;
-      inviteToken: string;
-      startedBy?: string | null;
-    }
-  ): Promise<{
+  return async function startSubmissionFromInvite(input: {
+    orgId: string;
+    inviteToken: string;
+    startedBy?: string | null;
+  }): Promise<{
     test: Test;
     submission: TestSubmission;
-    questions: TestQuestion[];
+    questions: (TestQuestion & { displayIndex: number })[];
   }> {
     const { orgId, inviteToken, startedBy } = input;
     const now = new Date();
@@ -116,41 +114,66 @@ export function makeStartSubmissionFromInvite(deps: {
       );
     }
 
-    // 3) Randomiser l'ordre des questions (tirage figé pour cette submission)
-    const shuffled = shuffleQuestions(questions);
-    const questionsWithDisplayIndex = shuffled.map(
-      (q, index): TestQuestion & { displayIndex: number } => ({
-        ...q,
-        displayIndex: index + 1,
-      })
-    );
+    // 3) À partir d’ici : 1 invite = 1 seule submission (reprise possible)
+    let submission: TestSubmission;
+    let questionsWithDisplayIndex: (TestQuestion & { displayIndex: number })[];
 
-    // 4) Créer la submission
-    const submission = await testRepo.startSubmission({
-      orgId,
-      testId: invite.testId,
-      candidateId: invite.candidateId,
-      // si tu veux raccrocher à une offre spécifique :
-      offerId: undefined,
-      submittedBy: startedBy ?? undefined,
-    });
+    if (invite.submissionId) {
+      // ✅ Déjà démarré → on REUTILISE la submission + l’ordre déjà figé
+      const existingQuestions =
+        await testRepo.getSubmissionQuestionsWithDisplayIndex({
+          orgId,
+          submissionId: invite.submissionId,
+        });
 
-    // 5) Créer les test_submission_items avec l'ordre affiché
-    await testRepo.createSubmissionItems({
-      orgId,
-      submissionId: submission.id,
-      items: questionsWithDisplayIndex.map((q) => ({
-        questionId: q.id,
-        displayIndex: q.displayIndex,
-      })),
-    });
+      const aggregate = await testRepo.getSubmissionWithAnswers({
+        submissionId: invite.submissionId,
+        orgId,
+      });
 
-    // 6) Lier l'invite à la submission (pour suivi)
-    await inviteRepo.linkSubmission({
-      inviteId: invite.id,
-      submissionId: submission.id,
-    });
+      submission = aggregate.submission;
 
+      questionsWithDisplayIndex =
+        existingQuestions.length > 0
+          ? existingQuestions
+          : shuffleQuestions(questions).map((q, index) => ({
+              ...q,
+              displayIndex: index + 1,
+            }));
+    } else {
+      // ✅ Première fois → on crée la submission + l’ordre randomisé
+      const shuffled = shuffleQuestions(questions);
+      questionsWithDisplayIndex = shuffled.map(
+        (q, index): TestQuestion & { displayIndex: number } => ({
+          ...q,
+          displayIndex: index + 1,
+        })
+      );
+
+      submission = await testRepo.startSubmission({
+        orgId,
+        testId: invite.testId,
+        candidateId: invite.candidateId,
+        offerId: undefined,
+        submittedBy: startedBy ?? undefined,
+        flowId: undefined, // TestInvite doesn't have flowId, only flowItemId
+        flowItemId: invite.flowItemId ?? undefined,
+      });
+
+      await testRepo.createSubmissionItems({
+        orgId,
+        submissionId: submission.id,
+        items: questionsWithDisplayIndex.map((q) => ({
+          questionId: q.id,
+          displayIndex: q.displayIndex,
+        })),
+      });
+
+      await inviteRepo.linkSubmission({
+        inviteId: invite.id,
+        submissionId: submission.id,
+      });
+    }
 
     return {
       test,

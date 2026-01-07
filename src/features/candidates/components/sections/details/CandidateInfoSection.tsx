@@ -24,6 +24,9 @@ export function CandidateInfoSection({ candidate, offer }: Props) {
       <div className="grid gap-3 text-sm md:grid-cols-2">
         <InfoRow label="Email" value={candidate.email ?? "—"} />
         <InfoRow label="Source" value={candidate.source ?? "—"} />
+        <InfoRow label="Location" value={candidate.location ?? "—"} />
+        <InfoRow label="Téléphone" value={candidate.phone ?? "—"} />
+        
         <InfoRow
           label="Créé le"
           value={new Date(candidate.createdAt).toLocaleDateString("fr-FR")}

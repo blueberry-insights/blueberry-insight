@@ -7,7 +7,7 @@ type Props = {
   candidates: CandidateListItem[];
   onEditNote?: (candidate: CandidateListItem) => void;
   offers: OfferListItem[];
-  onDeleteRequest?: (candidate: CandidateListItem) => void;
+  onArchiveRequest?: (candidate: CandidateListItem) => void;
   onUpdateRequest?: (candidate: CandidateListItem) => void;
   onStatusUpdated?: (
     candidateId: string,
@@ -18,7 +18,7 @@ type Props = {
 export function CandidateTable({
   candidates,
   onEditNote,
-  onDeleteRequest,
+  onArchiveRequest,
   onUpdateRequest,
   onStatusUpdated,
   offers,
@@ -59,7 +59,7 @@ export function CandidateTable({
                 candidate={candidate}
                 offer={offer === "" ? null : offer}
                 onEditNote={onEditNote}
-                onDeleteRequest={onDeleteRequest}
+                onArchiveRequest={onArchiveRequest}
                 onUpdateRequest={onUpdateRequest}
                 onStatusUpdated={onStatusUpdated}
               />

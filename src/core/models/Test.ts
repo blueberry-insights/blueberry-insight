@@ -18,6 +18,7 @@ export interface Test {
   isActive: boolean;
   createdBy: string;
   createdAt: string; // IS
+  archivedAt?: string | null;
 }
 
 export interface TestInvite {
@@ -65,6 +66,9 @@ export interface TestSubmission {
   submittedAt: string; // ISO date
   numericScore?: number | null;
   maxScore?: number | null;
+  flowId?: string | null;
+  flowItemId?: string | null;
+  completedAt?: string | null;
 }
 
 export interface TestAnswer {
@@ -97,7 +101,7 @@ export interface TestReview {
   submissionId: string;
   reviewerId: string;
   overallComment?: string | null;
-  axisComments?: TestReviewAxisComment[] | null;
+  axisComments?: Record<string, string>[] | null;
   createdAt: string; // ISO date
 }
 
@@ -173,6 +177,8 @@ export interface StartTestSubmissionInput {
   candidateId: string;
   offerId?: string;
   submittedBy?: string; // user id si le candidat est dans auth.users, sinon null
+  flowId?: string;
+  flowItemId?: string;
 }
 
 /**
@@ -209,4 +215,12 @@ export interface CreateSubmissionItemsInput {
     questionId: string;
     displayIndex: number;
   }[];
+}
+
+export interface TestDimensionInput {
+  orgId: string;
+  testId: string;
+  code: string;
+  title: string;
+  orderIndex: number;
 }

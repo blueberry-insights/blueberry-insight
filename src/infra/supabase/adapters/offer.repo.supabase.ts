@@ -8,7 +8,6 @@ import type {
   ContractType,
 } from "@/core/ports/OfferRepo";
 import type { Offer, OfferListItem, OfferStatus } from "@/core/models/Offer";
-import { supabaseAdmin } from "@/infra/supabase/client";
 
 type Db = SupabaseClient<Database>;
 
@@ -39,33 +38,10 @@ export function makeOfferRepo(sb: Db): OfferRepo {
         `
         )
         .eq("org_id", orgId)
+        .is("archived_at", null)
         .order("created_at", { ascending: false });
     
       if (error) throw error;
-      const userIds = Array.from(
-        new Set(
-          (data ?? [])
-            .flatMap((row) => [row.created_by, row.responsible_user_id])
-            .filter((id): id is string => id !== null)
-        )
-      );
-
-      const userNames = new Map<string, string>();
-      const adminClient = supabaseAdmin();
-      
-      await Promise.all(
-        userIds.map(async (userId) => {
-          try {
-            const { data: userData } = await adminClient.auth.admin.getUserById(userId);
-            if (userData?.user?.user_metadata?.full_name) {
-              userNames.set(userId, userData.user.user_metadata.full_name);
-            }
-          } catch (err) {
-            console.warn(`Unable to fetch user ${userId}:`, err);
-          }
-        })
-      );
-
       return (data ?? []).map((row) => ({
         id: row.id,
         title: row.title,
@@ -83,9 +59,7 @@ export function makeOfferRepo(sb: Db): OfferRepo {
         currency: row.currency ?? null,
         createdBy: row.created_by ?? null,
         responsibleUserId: row.responsible_user_id ?? null,
-        responsibleUserName: row.responsible_user_id
-          ? userNames.get(row.responsible_user_id) ?? null
-          : null,
+        responsibleUserName: null, // Sera enrichi dans les actions/pages si nécessaire
         candidateCount: row.candidates?.[0]?.count ?? 0,
       }));
     },
@@ -312,7 +286,13 @@ export function makeOfferRepo(sb: Db): OfferRepo {
         .eq("org_id", input.orgId)
         .eq("id", input.offerId);
       if (error) throw error;
-    }
+    },
+    async archiveById(input: { orgId: string; offerId: string }): Promise<void> {
+      const { error } = await sb.rpc("archive_offer", {
+        p_org_id: input.orgId,
+        p_offer_id: input.offerId,
+      });
+      if (error) throw error;
+    },
   };
-    
 }

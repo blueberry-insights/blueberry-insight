@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { CandidateTable } from "../table";
-import { CreateCandidateModal, EditCandidateNoteModal, DeleteCandidateModal, UpdateCandidateModal } from "../modals";
+import { CreateCandidateModal, EditCandidateNoteModal, UpdateCandidateModal, ArchiveCandidateModal } from "../modals";
 import { CandidatesFilters } from "../filters";
 import type { CandidateListItem } from "@/core/models/Candidate";
 import type { OfferListItem } from "@/core/models/Offer";
-import { deleteCandidateAction } from "@/app/(app)/candidates/actions";
+import { archiveCandidateAction } from "@/app/(app)/candidates/actions";
 import { useToast } from "@/shared/hooks/useToast";
 import { useFilters } from "@/shared/hooks/useFilters";
 
@@ -30,12 +30,11 @@ export function CandidatesScreen({ orgId, initialCandidates, offers }: Props) {
   const [candidateToUpdate, setCandidateToUpdate] = useState<CandidateListItem | null>(null);
   const [editNoteModalOpen, setEditNoteModalOpen] = useState(false);
   const [candidateToEditNote, setCandidateToEditNote] = useState<CandidateListItem | null>(null);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [candidateToDelete, setCandidateToDelete] = useState<CandidateListItem | null>(null);
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+  const [candidateToArchive, setCandidateToArchive] = useState<CandidateListItem | null>(null);
   
-  const [deletePending, startDeleteTransition] = useTransition();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [updatePending, _startUpdateTransition] = useTransition();
+  const [archivePending, startArchiveTransition] = useTransition();
+  const [updatePending] = useTransition();
   const { toast } = useToast();
 
   const { filterState, updateFilter, filteredItems: filteredCandidates } = useFilters<
@@ -74,7 +73,6 @@ export function CandidatesScreen({ orgId, initialCandidates, offers }: Props) {
     }
   );
 
-  // Handlers pour le modal de création
   function handleOpenCreate() {
     setCreateModalOpen(true);
   }
@@ -124,53 +122,45 @@ export function CandidatesScreen({ orgId, initialCandidates, offers }: Props) {
     setCandidateToEditNote(null);
   }
 
-  function handleOpenDelete(candidate: CandidateListItem) {
-    setCandidateToDelete(candidate);
-    setDeleteModalOpen(true);
+  function handleOpenArchive(candidate: CandidateListItem) {
+    setCandidateToArchive(candidate);
+    setArchiveModalOpen(true);
   }
 
-  function handleCloseDelete() {
-    setDeleteModalOpen(false);
-    setCandidateToDelete(null);
+  function handleCloseArchive() {
+    setArchiveModalOpen(false);
+    setCandidateToArchive(null);
   }
 
-  function handleConfirmDelete() {
-    if (!candidateToDelete) return;
-
-    startDeleteTransition(async () => {
+  function handleConfirmArchive() {
+    if (!candidateToArchive) return;
+  
+    startArchiveTransition(async () => {
       const form = new FormData();
-      form.set("candidateId", candidateToDelete.id);
-      if (candidateToDelete.cvPath) {
-        form.set("cvPath", candidateToDelete.cvPath);
-      }
-
-      const res = await deleteCandidateAction(form);
-
+      form.set("candidateId", candidateToArchive.id);
+  
+      const res = await archiveCandidateAction(form);
+  
       if (!res.ok) {
-        const errorMessage = res.error ?? "Erreur lors de la suppression du candidat";
         toast.error({
-          title: "Erreur de suppression",
-          description: errorMessage,
+          title: "Erreur d’archivage",
+          description: res.error ?? "Erreur lors de l’archivage du candidat",
         });
-        setDeleteModalOpen(false);
-        setCandidateToDelete(null);
+        handleCloseArchive();
         return;
       }
-
-      const candidateName = candidateToDelete.fullName;
-      setCandidates((prev) =>
-        prev.filter((c) => c.id !== candidateToDelete.id)
-      );
-
+  
+      setCandidates((prev) => prev.filter((c) => c.id !== candidateToArchive.id));
+  
       toast.success({
-        title: "Candidat supprimé",
-        description: `${candidateName} a été supprimé avec succès.`,
+        title: "Candidat archivé",
+        description: `${candidateToArchive.fullName} a été archivé.`,
       });
-
-      setDeleteModalOpen(false);
-      setCandidateToDelete(null);
+  
+      handleCloseArchive();
     });
   }
+  
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -205,7 +195,7 @@ export function CandidatesScreen({ orgId, initialCandidates, offers }: Props) {
       <CandidateTable
         candidates={filteredCandidates}
         onEditNote={handleOpenEditNote}
-        onDeleteRequest={handleOpenDelete}
+        onArchiveRequest={handleOpenArchive}
         onUpdateRequest={handleOpenUpdate}
         onStatusUpdated={(candidateId, newStatus) => {
           setCandidates((prev) =>
@@ -238,13 +228,13 @@ export function CandidatesScreen({ orgId, initialCandidates, offers }: Props) {
         onUpdated={handleNoteUpdated}
       />
       
-      <DeleteCandidateModal
-        open={deleteModalOpen}
-        candidate={candidateToDelete}
+      <ArchiveCandidateModal
+        open={archiveModalOpen}
+        candidate={candidateToArchive}
         offers={offers}
-        onClose={handleCloseDelete}
-        onDeleted={handleConfirmDelete}
-        isSubmitting={deletePending}
+        onClose={handleCloseArchive}
+        onArchived={handleConfirmArchive}
+        isSubmitting={archivePending}
       />
     </div>
   );

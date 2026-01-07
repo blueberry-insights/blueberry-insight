@@ -7,10 +7,11 @@ import type { Test } from "@/core/models/Test";
 import { TestLibraryTable } from "../table/TestLibraryTable";
 import { CreateTestModal } from "../modals/CreateTestModal";
 import { UpdateTestModal } from "../modals/UpdateTestModal";
-import { DeleteTestModal } from "../modals/DeleteTestModal";
+import { ArchiveTestModal } from "../modals/ArchiveTestModal";
 import { useToast } from "@/shared/hooks/useToast";
 import {
   duplicateTestAction,
+  archiveTestAction,
 } from "@/app/(app)/tests/action";
 
 type Props = {
@@ -25,11 +26,11 @@ export function TestLibraryScreen({ orgId, initialTests }: Props) {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [testToUpdate, setTestToUpdate] = useState<Test | null>(null);
 
-  const [testToDelete, setTestToDelete] = useState<Test | null>(null);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [testToArchive, setTestToArchive] = useState<Test | null>(null);
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
 
   const [duplicatePending, startDuplicateTransition] = useTransition();
-  const [deletePending] = useTransition();
+  const [archivePending, startArchiveTransition] = useTransition();
 
   const { toast } = useToast();
 
@@ -92,15 +93,44 @@ export function TestLibraryScreen({ orgId, initialTests }: Props) {
     });
   }
 
-  function handleOpenDelete(test: Test) {
-    setTestToDelete(test);
-    setDeleteModalOpen(true);
+  function handleOpenArchive(test: Test) {
+    setTestToArchive(test);
+    setArchiveModalOpen(true);
   }
 
-  function handleCloseDelete() {
-    if (deletePending) return;
-    setDeleteModalOpen(false);
-    setTestToDelete(null);
+  function handleCloseArchive() {
+    if (archivePending) return;
+    setArchiveModalOpen(false);
+    setTestToArchive(null);
+  }
+
+  function handleConfirmArchive() {
+    if (!testToArchive) return;
+
+    startArchiveTransition(async () => {
+      const form = new FormData();
+      form.set("testId", testToArchive.id);
+
+      const res = await archiveTestAction(form);
+
+      if (!res.ok) {
+        toast.error({
+          title: "Erreur d'archivage",
+          description: res.error ?? "Erreur lors de l'archivage du test",
+        });
+        handleCloseArchive();
+        return;
+      }
+
+      setTests((prev) => prev.filter((t) => t.id !== testToArchive.id));
+
+      toast.success({
+        title: "Test archivé",
+        description: `"${testToArchive.name}" a été archivé.`,
+      });
+
+      handleCloseArchive();
+    });
   }
 
   return (
@@ -130,8 +160,8 @@ export function TestLibraryScreen({ orgId, initialTests }: Props) {
         onUpdateRequest={handleOpenUpdate}
         onDuplicateRequest={handleDuplicateRequest}
         duplicatePending={duplicatePending}
-        onDeleteRequest={handleOpenDelete}
-        deletePending={deletePending}
+        onArchiveRequest={handleOpenArchive}
+        archivePending={archivePending}
       />
 
       <CreateTestModal
@@ -148,16 +178,12 @@ export function TestLibraryScreen({ orgId, initialTests }: Props) {
         test={testToUpdate}
       />
 
-      <DeleteTestModal
-        open={deleteModalOpen}
-        test={testToDelete}
-        isSubmitting={deletePending}
-        onClose={handleCloseDelete}
-        onDeleted={(id: string) => {
-          setTests((prev) => prev.filter((t) => t.id !== id));
-          setDeleteModalOpen(false);
-          setTestToDelete(null);
-        }}
+      <ArchiveTestModal
+        open={archiveModalOpen}
+        test={testToArchive}
+        isSubmitting={archivePending}
+        onClose={handleCloseArchive}
+        onConfirm={handleConfirmArchive}
       />
     </div>
   );

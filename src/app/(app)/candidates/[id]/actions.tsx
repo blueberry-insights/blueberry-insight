@@ -5,7 +5,24 @@ import { withAuth } from "@/infra/supabase/session";
 import { makeCandidateRepo } from "@/infra/supabase/adapters/candidate.repo.supabase";
 import { makeAttachCandidateCv } from "@/core/usecases/candidates/uploadCandidatCv";
 import { makeUpdateCandidate } from "@/core/usecases/candidates/updateCandidate";
+import { Test, TestInvite } from "@/core/models/Test";
+import { makeTestRepo } from "@/infra/supabase/adapters/test.repo.supabase";
+import { makeTestInviteRepo } from "@/infra/supabase/adapters/testInvite.repo.supabase";
+import { makeSendTestInviteForCandidate } from "@/core/usecases/tests/invites/sendTestInviteForCandidate";
+import { env } from "@/config/env";
+import { makeTestFlowRepo } from "@/infra/supabase/adapters/testFlow.repo.supabase";
+import { validateCvFile, getFileValidationErrorMessage } from "@/shared/validation/fileValidation";
+type SendInviteOk = {
+  ok: true;
+  invite: TestInvite;
+  test: Test;
+  url: string | null;
+};
 
+type SendInviteErr = {
+  ok: false;
+  error: string;
+};
 type Ok = { ok: true; candidate: CandidateListItem };
 type Err = { ok: false; error: string };
 
@@ -20,13 +37,25 @@ export async function uploadCandidateCvAction(formData: FormData): Promise<Uploa
       return { ok: false, error: "Fichier ou candidat manquant" };
     }
 
+   
+    const validation = validateCvFile(file);
+    if (!validation.ok) {
+      const errorMessage = getFileValidationErrorMessage(validation.error);
+      console.warn("[uploadCandidateCvAction] Fichier rejeté:", {
+        fileName: file.name,
+        size: file.size,
+        type: file.type,
+        error: validation.error,
+      });
+      return { ok: false, error: errorMessage };
+    }
+
     const orgId = ctx.orgId;
     if (!orgId) {
       return { ok: false, error: "Organisation introuvable pour cet utilisateur" };
     }
 
     const sb = ctx.sb;
-
 
     const bucket = "candidate-cv";
     const ext = file.name.split(".").pop() || "pdf";
@@ -107,3 +136,107 @@ export async function updateCandidateAction(formData: FormData): Promise<Ok | Er
     }
   });
 }
+
+export async function sendCandidateTestInviteAction(
+  formData: FormData
+): Promise<SendInviteOk | SendInviteErr> {
+  return withAuth(async (ctx): Promise<SendInviteOk | SendInviteErr> => {
+    const candidateId = String(formData.get("candidateId") || "").trim();
+    const testId = String(formData.get("testId") || "").trim();
+    const expiresInDaysRaw = String(formData.get("expiresInDays") || "3");
+
+    if (!candidateId || !testId) {
+      return { ok: false, error: "Candidat ou test manquant." };
+    }
+
+    const expiresInDays = Number(expiresInDaysRaw || "3");
+    const expiresInHours = expiresInDays * 24;
+
+    const { sb, orgId } = ctx;
+
+    try {
+      const testRepo = makeTestRepo(sb);
+      const inviteRepo = makeTestInviteRepo(sb);
+      const candidateRepo = makeCandidateRepo(sb);
+      const testFlowRepo = makeTestFlowRepo(sb);
+
+      // Vérifier que le test existe bien dans l'orga
+      const test = await testRepo.getTestById(testId, orgId);
+      if (!test) {
+        return {
+          ok: false,
+          error: "Test introuvable pour cette organisation.",
+        };
+      }
+
+      // Récupérer le candidat pour obtenir son offerId
+      const candidate = await candidateRepo.getById(orgId, candidateId);
+      if (!candidate) {
+        return {
+          ok: false,
+          error: "Candidat introuvable.",
+        };
+      }
+
+      let flowItemId: string | null = null;
+      if (candidate.offerId) {
+        try {
+          const flowData = await testFlowRepo.getFlowByOffer({
+            orgId,
+            offerId: candidate.offerId,
+          });
+
+          if (flowData) {
+            // Trouver le flow item qui correspond au testId
+            const flowItem = flowData.items.find(
+              (item) => item.kind === "test" && item.testId === testId
+            );
+            if (flowItem) {
+              flowItemId = flowItem.id;
+              console.log("[sendCandidateTestInviteAction] flowItemId trouvé:", flowItemId, "pour testId:", testId);
+            } else {
+              console.log("[sendCandidateTestInviteAction] testId", testId, "non trouvé dans le flow pour l'offre", candidate.offerId);
+            }
+          } else {
+            console.log("[sendCandidateTestInviteAction] aucun flow trouvé pour l'offre", candidate.offerId);
+          }
+        } catch (err) {
+          console.error("[sendCandidateTestInviteAction] erreur lors de la récupération du flow:", err);
+        }
+      } else {
+        console.log("[sendCandidateTestInviteAction] candidat sans offre associée, pas de flowItemId");
+      }
+
+      // 👉 On construit le usecase UNE fois
+      const sendInvite = makeSendTestInviteForCandidate({ inviteRepo, candidateRepo });
+
+      // 👉 On l'appelle avec les bons paramètres
+      const { invite } = await sendInvite({
+        orgId,
+        candidateId,
+        testId,
+        expiresInHours,
+        flowItemId,
+      });
+
+      const baseUrl = env.NEXT_PUBLIC_APP_URL ?? "";
+      const url = baseUrl
+        ? `${baseUrl}/candidate/test/${invite.token}`
+        : `/candidate/test/${invite.token}`;
+
+      return {
+        ok: true,
+        invite,
+        test,
+        url,
+      };
+    } catch (err) {
+      console.error("[sendCandidateTestInviteAction] error", err);
+      return {
+        ok: false,
+        error: "Impossible d'envoyer le test.",
+      };
+    }
+  });
+}
+

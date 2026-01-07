@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import {
   LayoutDashboard,
   Users,
@@ -20,17 +21,22 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
-const NAV: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/candidates", label: "Candidats", icon: Users },
-  { href: "/offers", label: "Offres", icon: BriefcaseBusiness },
-  { href: "/tests", label: "Tests", icon: FlaskConical },
-  { href: "/pool", label: "Vivier", icon: Boxes },
-  { href: "/settings", label: "Paramètres", icon: Settings },
-];
+function makeNav(showTestsMenu: boolean): NavItem[] {
+  return [
+    { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/candidates", label: "Candidats", icon: Users },
+    { href: "/offers", label: "Offres", icon: BriefcaseBusiness },
+    ...(showTestsMenu
+      ? [{ href: "/tests", label: "Tests", icon: FlaskConical } as NavItem]
+      : []),
+    { href: "/pool", label: "Vivier", icon: Boxes },
+    { href: "/settings", label: "Paramètres", icon: Settings },
+  ];
+}
 
 export function AppShell({
   children,
+  showTestsMenu,
   headerRightSlot,
   sidebarFooterSlot,
   defaultCollapsed = false,
@@ -41,16 +47,19 @@ export function AppShell({
   sidebarFooterSlot?: React.ReactNode;
   defaultCollapsed?: boolean;
   autoCollapseOnNavigate?: boolean;
+  showTestsMenu?: boolean;
 }) {
+
+
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const widthOpen = 260;
   const widthClosed = 64;
-  const navItems = useMemo(() => NAV, []);
+  const navItems = useMemo(() => makeNav(showTestsMenu ?? false), [showTestsMenu]);
 
   const currentPageName = useMemo(() => {
     const item = navItems.find(
-      (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+      (item) => pathname === item?.href || pathname.startsWith(item?.href + "/")
     );
     return item?.label ?? "";
   }, [pathname, navItems]);
@@ -99,7 +108,9 @@ export function AppShell({
             aria-label="Navigation principale"
           >
             <ul className="space-y-1">
-              {navItems.map(({ href, label, icon: Icon }) => {
+              {navItems.map((item) => {
+                if (!item) return null;
+                const { href, label, icon: Icon } = item;
                 const active =
                   pathname === href || pathname.startsWith(href + "/");
 
