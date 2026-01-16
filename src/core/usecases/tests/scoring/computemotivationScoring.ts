@@ -13,7 +13,7 @@ type DimensionScore = {
   level: string;
 };
 
-export function computeMotivationScoring(params: {
+export function computeMotivationScoring(params: { 
   test: Test;
   questions: TestQuestion[];
   answers: AnswerInput[];
@@ -107,7 +107,7 @@ export function computeMotivationScoring(params: {
   return {
     numericScore,
     maxScore: 5,
-    scoringResult,
+    scoringResult: scoringResult as MotivationScoringResult,
   };
 }
 
