@@ -5,7 +5,7 @@ import type { CandidateRepo } from "@/core/ports/CandidateRepo";
 import type { TestFlowRepo } from "@/core/ports/TestFlowRepo";
 
 // ✅ v2.5 : UN SEUL moteur
-import { computeMotivationScoring } from "../scoring/computeMotivationScoring";
+import { computeMotivationScoring } from "@/core/usecases/tests/scoring/computeMotivationScoring";
 import { MotivationScoringResult } from "@/core/models/Test";
 
 export class SubmitSubmissionError extends Error {

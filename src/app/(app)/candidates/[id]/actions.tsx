@@ -5,7 +5,7 @@ import { withAuth } from "@/infra/supabase/session";
 import { makeCandidateRepo } from "@/infra/supabase/adapters/candidate.repo.supabase";
 import { makeAttachCandidateCv } from "@/core/usecases/candidates/uploadCandidatCv";
 import { makeUpdateCandidate } from "@/core/usecases/candidates/updateCandidate";
-import { Test, TestInvite } from "@/core/models/Test";
+import { Test, TestInvite, TestType, TestRef } from "@/core/models/Test";
 import { makeTestRepo } from "@/infra/supabase/adapters/test.repo.supabase";
 import { makeTestInviteRepo } from "@/infra/supabase/adapters/testInvite.repo.supabase";
 import { makeSendTestInviteForCandidate } from "@/core/usecases/tests/invites/sendTestInviteForCandidate";
@@ -18,7 +18,7 @@ import {
 type SendInviteOk = {
   ok: true;
   invite: TestInvite;
-  test: Test;
+  test: TestRef;
   url: string | null;
 };
 
@@ -173,7 +173,7 @@ export async function sendCandidateTestInviteAction(
       const testFlowRepo = makeTestFlowRepo(sb);
 
       // 1) test interne org (celui que l'orga a créé)
-      let test = await testRepo.getTestById(testId, orgId);
+      let test: Test | TestRef | null = await testRepo.getTestById(testId, orgId);
 
       // 2) sinon, test catalogue Blueberry (autorisé pour cette org) via RPC security definer
       if (!test) {
@@ -200,8 +200,8 @@ export async function sendCandidateTestInviteAction(
           test = {
             id: catalogItem.id,
             name: catalogItem.name,
-            type: catalogItem.type,
-          };
+            type: catalogItem.type as TestType,
+          } as TestRef;
         }
       }
 

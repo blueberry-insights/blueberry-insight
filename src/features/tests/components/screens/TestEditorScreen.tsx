@@ -218,14 +218,9 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
       form.set("dimensionOrder", String(dimensionOrder));
 
       if (kind === "scale") {
-        if (kind === "scale") {
-          if (minValue !== "") form.set("minValue", minValue);
-          if (maxValue !== "") form.set("maxValue", maxValue);
-          form.set("isReversed", String(createForm.isReversed));
-        }
-
         if (minValue !== "") form.set("minValue", minValue);
         if (maxValue !== "") form.set("maxValue", maxValue);
+        form.set("isReversed", String(createForm.isReversed));
       }
 
       if (kind === "choice") {
@@ -443,10 +438,29 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
 
             {/* Échelle : min / max */}
             {createForm.kind === "scale" ? (
-              <div className="md:col-span-4 rounded-lg border border-slate-200 bg-white/60 p-3 space-y-2">
-                <div className="text-sm font-medium text-slate-900">
-                  Sens de l’item
-                </div>
+              <>
+                <Input
+                  type="number"
+                  name="minValue"
+                  value={createForm.minValue}
+                  onChange={(e) => setCreate("minValue", e.target.value)}
+                  placeholder="Min"
+                  disabled={createPending}
+                  className="h-9"
+                />
+                <Input
+                  type="number"
+                  name="maxValue"
+                  value={createForm.maxValue}
+                  onChange={(e) => setCreate("maxValue", e.target.value)}
+                  placeholder="Max"
+                  disabled={createPending}
+                  className="h-9"
+                />
+                <div className="md:col-span-2 rounded-lg border border-slate-200 bg-white/60 p-3 space-y-2">
+                  <div className="text-sm font-medium text-slate-900">
+                    Sens de l&apos;item
+                  </div>
 
                 <label className="flex items-start gap-2 text-sm text-slate-700">
                   <input
@@ -484,11 +498,12 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
                   </span>
                 </label>
 
-                <p className="text-[11px] text-slate-500">
-                  Utilise “Inversé” pour les items formulés négativement (ex:
-                  “J’attends qu’on me dise quoi faire.”).
-                </p>
-              </div>
+                  <p className="text-[11px] text-slate-500">
+                    Utilise &quot;Inversé&quot; pour les items formulés négativement (ex:
+                    &quot;J&apos;attends qu&apos;on me dise quoi faire.&quot;).
+                  </p>
+                </div>
+              </>
             ) : (
               <>
                 <div />

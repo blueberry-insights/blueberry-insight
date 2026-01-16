@@ -4,6 +4,7 @@ import type {
   Tables,
   TablesInsert,
   TablesUpdate,
+  Json,
 } from "../types/Database";
 import type { TestRepo } from "@/core/ports/TestRepo";
 import type {
@@ -279,21 +280,71 @@ export function makeTestRepo(sb: Db): TestRepo {
       const isScale = input.kind === "scale";
       const isChoice = input.kind === "choice";
 
-      const { data, error } = await sb.rpc("add_test_question", {
+      // Construire les paramètres de la RPC
+      const rpcParams: {
+        p_org_id: string;
+        p_test_id: string;
+        p_dimension_code: string;
+        p_label: string;
+        p_kind: string;
+        p_is_required: boolean;
+        p_min_value?: number;
+        p_max_value?: number;
+        p_options?: Json;
+      } = {
         p_org_id: input.orgId,
         p_test_id: input.testId,
         p_dimension_code: dimensionCode,
         p_label: input.label,
         p_kind: input.kind,
-        p_min_value: isScale ? (input.minValue ?? undefined) : undefined,
-        p_max_value: isScale ? (input.maxValue ?? undefined) : undefined,
-        p_options: isChoice ? (input.options ?? null) : null,
         p_is_required: input.isRequired ?? true,
-      });
+      };
+
+      // Ajouter min/max seulement si c'est une scale et que les valeurs sont définies
+      if (isScale) {
+        if (input.minValue !== undefined && input.minValue !== null) {
+          rpcParams.p_min_value = input.minValue;
+        }
+        if (input.maxValue !== undefined && input.maxValue !== null) {
+          rpcParams.p_max_value = input.maxValue;
+        }
+      }
+
+      // Ajouter options seulement si c'est un choice
+      if (isChoice && input.options) {
+        rpcParams.p_options = input.options as Json;
+      }
+
+      const { data, error } = await sb.rpc("add_test_question", rpcParams);
 
       if (error || !data) {
         console.error("[TestRepo.addQuestion] rpc error", error);
         throw error ?? new Error("Failed to add question");
+      }
+
+      // Mettre à jour is_reversed si nécessaire (la RPC ne le supporte pas encore)
+      // On met à jour même si c'est false (car false est une valeur valide)
+      if (isScale && input.isReversed !== undefined) {
+        const { error: updateError } = await sb
+          .from("test_questions")
+          .update({ is_reversed: input.isReversed ?? false })
+          .eq("id", data.id);
+        
+        if (updateError) {
+          console.error("[TestRepo.addQuestion] update is_reversed error", updateError);
+          // On continue quand même, ce n'est pas bloquant
+        } else {
+          // Récupérer la question mise à jour pour retourner les bonnes données
+          const { data: updatedData, error: fetchError } = await sb
+            .from("test_questions")
+            .select("*")
+            .eq("id", data.id)
+            .single();
+          
+          if (!fetchError && updatedData) {
+            return mapQuestionRow(updatedData);
+          }
+        }
       }
 
       return mapQuestionRow(data);
@@ -312,7 +363,7 @@ export function makeTestRepo(sb: Db): TestRepo {
                 null) as TablesUpdate<"test_questions">["options"])
             : null,
         is_required: input.isRequired ?? true,
-        is_reversed : input.kind === "scale" ? ((input as UpdateQuestionInput & { isReversed?: boolean | null }).isReversed ?? false) : null,
+        is_reversed: input.kind === "scale" ? (input.isReversed ?? null) : null,
       };
 
       const { data, error } = await sb

@@ -17,6 +17,7 @@ const InputSchema = z.object({
   businessCode: z.string().optional().nullable(),
   dimensionCode: z.string().optional().nullable(),
   dimensionOrder: z.number().int().optional().nullable(),
+  isReversed: z.boolean().optional().nullable(),
 });
 
 export function makeCreateQuestion(testRepo: TestRepo) {
@@ -36,6 +37,7 @@ export function makeCreateQuestion(testRepo: TestRepo) {
       businessCode: input.businessCode ?? undefined,
       dimensionCode: input.dimensionCode ?? undefined,
       dimensionOrder: input.dimensionOrder ?? undefined,
+      isReversed: input.isReversed ?? undefined,
     };
 
     const created = await testRepo.addQuestion(payload);

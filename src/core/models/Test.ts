@@ -176,6 +176,7 @@ export interface CreateQuestionInput {
   businessCode?: string | null;
   dimensionCode?: string | null;
   dimensionOrder?: number | null;
+  isReversed?: boolean | null;
 }
 
 export interface UpdateQuestionInput {
@@ -187,6 +188,7 @@ export interface UpdateQuestionInput {
   maxValue?: number | null;
   options?: string[] | null;
   isRequired?: boolean;
+  isReversed?: boolean | null;
 }
 
 export interface ReorderQuestionsInput {
