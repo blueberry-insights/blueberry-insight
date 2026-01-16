@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import type { TestFlow, TestFlowItem } from "@/core/models/TestFlow";
-import type { Test } from "@/core/models/Test";
+import type { BlueberryCatalogTest } from "@/core/models/Test";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ type Props = {
   offerId: string;
   flow: TestFlow;
   items: TestFlowItem[];
-  tests: Test[];
+  tests: BlueberryCatalogTest[];
 };
 
 type AddMode = "video" | "test";

@@ -2,9 +2,9 @@
 
 import { useState, useTransition, useMemo } from "react";
 import type { CandidateListItem } from "@/core/models/Candidate";
-import type { TestSubmission } from "@/core/models/Test";
+import type { TestSubmission, TestRef } from "@/core/models/Test";
 import type { OfferListItem } from "@/core/models/Offer";
-import type { Test } from "@/core/models/Test";
+
 
 import {
   uploadCandidateCvAction,
@@ -52,7 +52,7 @@ type Props = {
   candidate: CandidateListItem;
   offer: OfferListItem | null;
   allOffers: OfferListItem[] | null;
-  tests: Test[];
+  tests: TestRef[];
   testInvites: CandidateInviteView[];
   testFlowInfoMap?: Record<string, TestFlowItemInfo>;
   testSubmissions: TestSubmission[];
@@ -76,17 +76,13 @@ export function CandidateDetailScreen({
   const [isSendTestOpen, setIsSendTestOpen] = useState(false);
   const [isSendingTest, startSendTestTransition] = useTransition();
   
-  // Calculer la valeur par défaut avec useMemo
   const defaultTestId = useMemo(() => {
     return tests?.length === 1 ? tests[0].id : "";
   }, [tests]);
   
-  // Initialiser l'état avec la valeur calculée
   const [selectedTestId, setSelectedTestId] = useState<string>(() => defaultTestId);
   
-  // Calculer la valeur effective à utiliser dans le rendu
-  // Si l'utilisateur a sélectionné un test qui existe toujours, on l'utilise
-  // Sinon, on utilise la valeur par défaut
+  
   const effectiveTestId = useMemo(() => {
     if (selectedTestId && tests?.some(t => t.id === selectedTestId)) {
       return selectedTestId;

@@ -3,8 +3,10 @@ import type { TestRepo } from "@/core/ports/TestRepo";
 import type { TestInviteRepo } from "@/core/ports/TestInviteRepo";
 import type { CandidateRepo } from "@/core/ports/CandidateRepo";
 import type { TestFlowRepo } from "@/core/ports/TestFlowRepo";
-import { computeMotivationScore } from "../scoring/computeMotivationScore";
-import type { TestQuestion } from "@/core/models/Test";
+
+// ✅ v2.5 : UN SEUL moteur
+import { computeMotivationScoring } from "../scoring/computeMotivationScoring";
+import { MotivationScoringResult } from "@/core/models/Test";
 
 export class SubmitSubmissionError extends Error {
   code:
@@ -84,7 +86,10 @@ export function makeSubmitSubmissionAnswers(deps: {
     }
 
     // 1) Charger la submission demandée
-    const submission = await testRepo.getSubmissionById({ orgId, submissionId });
+    const submission = await testRepo.getSubmissionById({
+      orgId,
+      submissionId,
+    });
     if (!submission) {
       throw new SubmitSubmissionError(
         "SUBMISSION_NOT_FOUND",
@@ -121,9 +126,8 @@ export function makeSubmitSubmissionAnswers(deps: {
     }
 
     // 5) Validation spécifique FLOW
-    let flowData: Awaited<
-      ReturnType<TestFlowRepo["getFlowByOffer"]>
-    > | null = null;
+    let flowData: Awaited<ReturnType<TestFlowRepo["getFlowByOffer"]>> | null =
+      null;
 
     if (isFlowMode && invite) {
       const candidate = await candidateRepo.getById(orgId, invite.candidateId);
@@ -147,7 +151,10 @@ export function makeSubmitSubmissionAnswers(deps: {
       }
 
       const allowedFlowItemIds = new Set(flowData.items.map((it) => it.id));
-      if (!submission.flowItemId || !allowedFlowItemIds.has(submission.flowItemId)) {
+      if (
+        !submission.flowItemId ||
+        !allowedFlowItemIds.has(submission.flowItemId)
+      ) {
         throw new SubmitSubmissionError(
           "SUBMISSION_NOT_IN_FLOW",
           "Cette submission ne fait pas partie du parcours."
@@ -200,10 +207,7 @@ export function makeSubmitSubmissionAnswers(deps: {
     }
 
     // 7) Récupérer test + questions pour le scoring
-    const testWithQuestions = await testRepo.getTestWithQuestions(
-      submission.testId,
-      orgId
-    );
+    const testWithQuestions = await testRepo.getTestWithQuestionsAnyOrg(submission.testId, orgId);
 
     if (!testWithQuestions) {
       throw new SubmitSubmissionError(
@@ -215,8 +219,6 @@ export function makeSubmitSubmissionAnswers(deps: {
     const { test, questions } = testWithQuestions;
 
     // 8) Protection "déjà complété"
-    // Note: submittedAt est défini à la création (démarrage du test),
-    // completedAt est défini uniquement quand les réponses sont soumises
     if (submission.completedAt) {
       throw new SubmitSubmissionError(
         "SUBMISSION_ALREADY_COMPLETED",
@@ -224,37 +226,38 @@ export function makeSubmitSubmissionAnswers(deps: {
       );
     }
 
-    // 9) Calcul du score uniquement pour les tests de motivations
+    // 9) Scoring uniquement pour les tests de motivations (v2.5)
     let numericScore: number | undefined;
     let maxScore: number | undefined;
+    let scoringResult: MotivationScoringResult | null | undefined;
 
     if (test.type === "motivations") {
-      const score = computeMotivationScore({
+      const scoring = computeMotivationScoring({
         test,
         questions,
         answers,
       });
 
-      numericScore = score.numericScore ?? undefined;
-      maxScore = score.maxScore ?? undefined;
+      numericScore = scoring.numericScore ?? undefined;
+      maxScore = scoring.maxScore ?? undefined;
+      scoringResult = scoring.scoringResult ?? null;
     }
 
-    // 10) Persister les réponses + éventuel score
+    // 10) Persister les réponses + éventuel score + scoring_result
     const result = await testRepo.submitAnswers({
       orgId,
       submissionId,
       answers,
       numericScore,
       maxScore,
+      scoringResult // ✅ nouveau champ (jsonb) sur submission
     });
 
     // 11) Marquer l'invitation comme complétée (si fournie)
     if (invite) {
       if (!isFlowMode) {
-        // TEST SEUL : on termine l'invite directement
         await inviteRepo.markCompleted({ inviteId: invite.id });
       } else {
-        // FLOW : on termine seulement si tout le flow est complété
         const testItemIds = flowData!.items
           .filter((it) => it.kind === "test")
           .map((it) => it.id);

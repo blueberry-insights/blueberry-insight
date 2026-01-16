@@ -340,6 +340,39 @@ export type Database = {
           },
         ]
       }
+      test_catalog_targets: {
+        Row: {
+          created_at: string
+          org_id: string
+          test_id: string
+        }
+        Insert: {
+          created_at?: string
+          org_id: string
+          test_id: string
+        }
+        Update: {
+          created_at?: string
+          org_id?: string
+          test_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_catalog_targets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_catalog_targets_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_dimensions: {
         Row: {
           code: string
@@ -579,6 +612,7 @@ export type Database = {
           dimension_order: number | null
           id: string
           is_required: boolean
+          is_reversed: boolean | null
           kind: string
           label: string
           max_value: number | null
@@ -586,6 +620,7 @@ export type Database = {
           options: Json | null
           order_index: number
           org_id: string
+          scoring_type: string | null
           test_id: string
         }
         Insert: {
@@ -595,6 +630,7 @@ export type Database = {
           dimension_order?: number | null
           id?: string
           is_required?: boolean
+          is_reversed?: boolean | null
           kind: string
           label: string
           max_value?: number | null
@@ -602,6 +638,7 @@ export type Database = {
           options?: Json | null
           order_index?: number
           org_id: string
+          scoring_type?: string | null
           test_id: string
         }
         Update: {
@@ -611,6 +648,7 @@ export type Database = {
           dimension_order?: number | null
           id?: string
           is_required?: boolean
+          is_reversed?: boolean | null
           kind?: string
           label?: string
           max_value?: number | null
@@ -618,6 +656,7 @@ export type Database = {
           options?: Json | null
           order_index?: number
           org_id?: string
+          scoring_type?: string | null
           test_id?: string
         }
         Relationships: [
@@ -732,6 +771,7 @@ export type Database = {
           numeric_score: number | null
           offer_id: string | null
           org_id: string
+          scoring_result: Json | null
           submitted_at: string
           submitted_by: string | null
           test_id: string
@@ -746,6 +786,7 @@ export type Database = {
           numeric_score?: number | null
           offer_id?: string | null
           org_id: string
+          scoring_result?: Json | null
           submitted_at?: string
           submitted_by?: string | null
           test_id: string
@@ -760,6 +801,7 @@ export type Database = {
           numeric_score?: number | null
           offer_id?: string | null
           org_id?: string
+          scoring_result?: Json | null
           submitted_at?: string
           submitted_by?: string | null
           test_id?: string
@@ -892,6 +934,7 @@ export type Database = {
           dimension_order: number | null
           id: string
           is_required: boolean
+          is_reversed: boolean | null
           kind: string
           label: string
           max_value: number | null
@@ -899,6 +942,7 @@ export type Database = {
           options: Json | null
           order_index: number
           org_id: string
+          scoring_type: string | null
           test_id: string
         }
         SetofOptions: {
@@ -916,11 +960,46 @@ export type Database = {
         Args: { p_offer_id: string; p_org_id: string }
         Returns: undefined
       }
+      
       archive_test: {
         Args: { p_org_id: string; p_test_id: string }
         Returns: undefined
       }
+      get_blueberry_test_catalog_item: {
+        Args: { p_org_id: string; p_test_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          type: string
+        }[]
+      }
+      get_test_with_questions_any_org: {
+        Args: {
+          p_blueberry_org_id: string
+          p_org_id: string
+          p_test_id: string
+        }
+        Returns: Json
+      }
       get_user_org_id: { Args: never; Returns: string }
+      list_blueberry_test_catalog: {
+        Args: { p_org_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          type: string
+        }[]
+      }
+      list_targetable_organizations: {
+        Args: never
+        Returns: {
+          id: string
+          name: string
+          slug: string
+        }[]
+      }
       take_next_candidate_seq: { Args: { p_org_id: string }; Returns: number }
     }
     Enums: {

@@ -18,7 +18,7 @@ export default async function OfferTestsPage({
 
   const getFlow = makeGetOfferTestFlowWithQuestions(flowRepo, testRepo);
   const data = await getFlow({ orgId: ctx.orgId, offerId });
-  const tests = await testRepo.listTestsByOrg(ctx.orgId);
+  const tests = await testRepo.listBlueberryCatalogTests(ctx.orgId);
 
   return (
     <TestOfferScreen

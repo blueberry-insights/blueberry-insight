@@ -155,6 +155,7 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
     options: "",
     dimensionCode: defaultDim?.code ?? "",
     dimensionOrder: defaultDim?.orderIndex ?? 1,
+    isReversed: false,
   });
 
   function setCreate<K extends keyof typeof createForm>(
@@ -188,6 +189,7 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
       options,
       dimensionCode,
       dimensionOrder,
+      isReversed,
     } = createForm;
 
     if (!label.trim()) {
@@ -205,6 +207,7 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
 
     startCreateTransition(async () => {
       const form = new FormData();
+      form.set("orgId", test.orgId);
       form.set("testId", test.id);
       form.set("label", label.trim());
       form.set("kind", kind);
@@ -215,6 +218,12 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
       form.set("dimensionOrder", String(dimensionOrder));
 
       if (kind === "scale") {
+        if (kind === "scale") {
+          if (minValue !== "") form.set("minValue", minValue);
+          if (maxValue !== "") form.set("maxValue", maxValue);
+          form.set("isReversed", String(createForm.isReversed));
+        }
+
         if (minValue !== "") form.set("minValue", minValue);
         if (maxValue !== "") form.set("maxValue", maxValue);
       }
@@ -416,7 +425,10 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
             <Select
               name="kind"
               value={createForm.kind}
-              onValueChange={(value: QuestionKind) => setCreate("kind", value)}
+              onValueChange={(value: QuestionKind) => {
+                setCreate("kind", value);
+                if (value !== "scale") setCreate("isReversed", false);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Type" />
@@ -431,22 +443,52 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
 
             {/* Échelle : min / max */}
             {createForm.kind === "scale" ? (
-              <>
-                <Input
-                  name="minValue"
-                  type="number"
-                  placeholder="Min"
-                  value={createForm.minValue}
-                  onChange={(e) => setCreate("minValue", e.target.value)}
-                />
-                <Input
-                  name="maxValue"
-                  type="number"
-                  placeholder="Max"
-                  value={createForm.maxValue}
-                  onChange={(e) => setCreate("maxValue", e.target.value)}
-                />
-              </>
+              <div className="md:col-span-4 rounded-lg border border-slate-200 bg-white/60 p-3 space-y-2">
+                <div className="text-sm font-medium text-slate-900">
+                  Sens de l’item
+                </div>
+
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="create-scale-sense"
+                    className="h-4 w-4 mt-0.5"
+                    checked={!createForm.isReversed}
+                    onChange={() => setCreate("isReversed", false)}
+                    disabled={createPending}
+                  />
+                  <span>
+                    <span className="font-medium">Normal</span> — Plus je suis
+                    d’accord, plus c’est positif.
+                    <span className="block text-[11px] text-slate-500">
+                      Exemple : 5 = bon / 1 = mauvais
+                    </span>
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-2 text-sm text-slate-700">
+                  <input
+                    type="radio"
+                    name="create-scale-sense"
+                    className="h-4 w-4 mt-0.5"
+                    checked={createForm.isReversed}
+                    onChange={(e) => setCreate("isReversed", e.target.checked)}
+                    disabled={createPending}
+                  />
+                  <span>
+                    <span className="font-medium">Inversé</span> — Plus je suis
+                    d’accord, plus c’est négatif (score inversé).
+                    <span className="block text-[11px] text-slate-500">
+                      Exemple : 5 = mauvais / 1 = bon
+                    </span>
+                  </span>
+                </label>
+
+                <p className="text-[11px] text-slate-500">
+                  Utilise “Inversé” pour les items formulés négativement (ex:
+                  “J’attends qu’on me dise quoi faire.”).
+                </p>
+              </div>
             ) : (
               <>
                 <div />
@@ -500,6 +542,7 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
                 ) : (
                   <TestQuestionsEditor
                     testId={test.id}
+                    testOrgId={test.orgId}
                     questions={questions}
                     onDeleteLocal={(id) =>
                       setQuestionList((prev) => prev.filter((q) => q.id !== id))

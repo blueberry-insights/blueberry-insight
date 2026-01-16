@@ -66,6 +66,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     orgId: orgId,
     role: role,
   });
+  
   const headerRightSlot = (
     <div className="flex items-center gap-2">
       <OrgSwitcherServer />

@@ -11,7 +11,10 @@ import { makeTestInviteRepo } from "@/infra/supabase/adapters/testInvite.repo.su
 import { makeSendTestInviteForCandidate } from "@/core/usecases/tests/invites/sendTestInviteForCandidate";
 import { env } from "@/config/env";
 import { makeTestFlowRepo } from "@/infra/supabase/adapters/testFlow.repo.supabase";
-import { validateCvFile, getFileValidationErrorMessage } from "@/shared/validation/fileValidation";
+import {
+  validateCvFile,
+  getFileValidationErrorMessage,
+} from "@/shared/validation/fileValidation";
 type SendInviteOk = {
   ok: true;
   invite: TestInvite;
@@ -28,7 +31,9 @@ type Err = { ok: false; error: string };
 
 export type UploadCvResult = Ok | Err;
 
-export async function uploadCandidateCvAction(formData: FormData): Promise<UploadCvResult> {
+export async function uploadCandidateCvAction(
+  formData: FormData
+): Promise<UploadCvResult> {
   return withAuth(async (ctx) => {
     const file = formData.get("cv") as File | null;
     const candidateId = String(formData.get("candidateId") || "").trim();
@@ -37,7 +42,6 @@ export async function uploadCandidateCvAction(formData: FormData): Promise<Uploa
       return { ok: false, error: "Fichier ou candidat manquant" };
     }
 
-   
     const validation = validateCvFile(file);
     if (!validation.ok) {
       const errorMessage = getFileValidationErrorMessage(validation.error);
@@ -52,7 +56,10 @@ export async function uploadCandidateCvAction(formData: FormData): Promise<Uploa
 
     const orgId = ctx.orgId;
     if (!orgId) {
-      return { ok: false, error: "Organisation introuvable pour cet utilisateur" };
+      return {
+        ok: false,
+        error: "Organisation introuvable pour cet utilisateur",
+      };
     }
 
     const sb = ctx.sb;
@@ -95,21 +102,26 @@ export async function uploadCandidateCvAction(formData: FormData): Promise<Uploa
   });
 }
 
-export async function updateCandidateAction(formData: FormData): Promise<Ok | Err> {
+export async function updateCandidateAction(
+  formData: FormData
+): Promise<Ok | Err> {
   return withAuth(async (ctx): Promise<Ok | Err> => {
     const candidateId = String(formData.get("id") ?? "");
     const offerIdRaw = formData.get("offerId");
-    const offerId = offerIdRaw === "none" || offerIdRaw === "" ? null : String(offerIdRaw ?? "");
+    const offerId =
+      offerIdRaw === "none" || offerIdRaw === ""
+        ? null
+        : String(offerIdRaw ?? "");
 
     if (!candidateId) {
       return { ok: false, error: "Candidat manquant" };
     }
 
     const repo = makeCandidateRepo(ctx.sb);
-    
+
     // Récupérer le candidat actuel pour préserver les autres champs
     const currentCandidate = await repo.getById(ctx.orgId, candidateId);
-    
+
     if (!currentCandidate) {
       return { ok: false, error: "Candidat introuvable" };
     }
@@ -160,12 +172,43 @@ export async function sendCandidateTestInviteAction(
       const candidateRepo = makeCandidateRepo(sb);
       const testFlowRepo = makeTestFlowRepo(sb);
 
-      // Vérifier que le test existe bien dans l'orga
-      const test = await testRepo.getTestById(testId, orgId);
+      // 1) test interne org (celui que l'orga a créé)
+      let test = await testRepo.getTestById(testId, orgId);
+
+      // 2) sinon, test catalogue Blueberry (autorisé pour cette org) via RPC security definer
+      if (!test) {
+        const { data: catalogItem, error: catErr } = await sb
+          .rpc("get_blueberry_test_catalog_item", {
+            p_org_id: orgId,
+            p_test_id: testId,
+          })
+          .maybeSingle();
+
+        if (catErr) {
+          console.error(
+            "[sendCandidateTestInviteAction] catalog lookup error",
+            catErr
+          );
+          return {
+            ok: false,
+            error: "Impossible de vérifier le test catalogue.",
+          };
+        }
+
+        if (catalogItem) {
+          // normalise pour matcher ton type Test (mets juste les champs dont tu as besoin)
+          test = {
+            id: catalogItem.id,
+            name: catalogItem.name,
+            type: catalogItem.type,
+          };
+        }
+      }
+
       if (!test) {
         return {
           ok: false,
-          error: "Test introuvable pour cette organisation.",
+          error: "Test introuvable ou non autorisé pour cette organisation.",
         };
       }
 
@@ -193,22 +236,43 @@ export async function sendCandidateTestInviteAction(
             );
             if (flowItem) {
               flowItemId = flowItem.id;
-              console.log("[sendCandidateTestInviteAction] flowItemId trouvé:", flowItemId, "pour testId:", testId);
+              console.log(
+                "[sendCandidateTestInviteAction] flowItemId trouvé:",
+                flowItemId,
+                "pour testId:",
+                testId
+              );
             } else {
-              console.log("[sendCandidateTestInviteAction] testId", testId, "non trouvé dans le flow pour l'offre", candidate.offerId);
+              console.log(
+                "[sendCandidateTestInviteAction] testId",
+                testId,
+                "non trouvé dans le flow pour l'offre",
+                candidate.offerId
+              );
             }
           } else {
-            console.log("[sendCandidateTestInviteAction] aucun flow trouvé pour l'offre", candidate.offerId);
+            console.log(
+              "[sendCandidateTestInviteAction] aucun flow trouvé pour l'offre",
+              candidate.offerId
+            );
           }
         } catch (err) {
-          console.error("[sendCandidateTestInviteAction] erreur lors de la récupération du flow:", err);
+          console.error(
+            "[sendCandidateTestInviteAction] erreur lors de la récupération du flow:",
+            err
+          );
         }
       } else {
-        console.log("[sendCandidateTestInviteAction] candidat sans offre associée, pas de flowItemId");
+        console.log(
+          "[sendCandidateTestInviteAction] candidat sans offre associée, pas de flowItemId"
+        );
       }
 
       // 👉 On construit le usecase UNE fois
-      const sendInvite = makeSendTestInviteForCandidate({ inviteRepo, candidateRepo });
+      const sendInvite = makeSendTestInviteForCandidate({
+        inviteRepo,
+        candidateRepo,
+      });
 
       // 👉 On l'appelle avec les bons paramètres
       const { invite } = await sendInvite({
@@ -239,4 +303,3 @@ export async function sendCandidateTestInviteAction(
     }
   });
 }
-

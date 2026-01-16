@@ -16,7 +16,7 @@ import { makeGetTestFlowItemForOffer } from "@/core/usecases/tests/flows/getTest
 
 import type { OfferListItem } from "@/core/models/Offer";
 import type { TestFlowItemInfo } from "@/core/usecases/tests/flows/getTestFlowItemForOffer";
-import type { TestSubmission } from "@/core/models/Test";
+import type { TestSubmission, TestRef } from "@/core/models/Test";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -25,7 +25,7 @@ type Props = {
 type SubmissionScoreVM = {
   isScored: boolean;
   scoreLabel: string;
-  ratio?: number; // 0..1
+  ratio?: number;
   badge?: "Excellent" | "Bon" | "Moyen" | "Faible";
 };
 
@@ -51,6 +51,13 @@ function mapSubmissionScore(sub: Pick<TestSubmission, "numericScore" | "maxScore
   };
 }
 
+function mergeTestsById<T extends { id: string }>(a: T[] = [], b: T[] = []) {
+  const m = new Map<string, T>();
+  for (const t of a) m.set(t.id, t);
+  for (const t of b) m.set(t.id, t); // b override si besoin
+  return Array.from(m.values());
+}
+
 export default async function CandidateDetailPage({ params }: Props) {
   const { id } = await params;
 
@@ -63,7 +70,14 @@ export default async function CandidateDetailPage({ params }: Props) {
   const offerRepo = makeOfferRepo(sb);
   const flowRepo = makeTestFlowRepo(sb);
 
-  const tests = await testRepo.listTestsByOrg(orgId);
+  // ✅ 1) Tests internes de l'orga
+  const orgTests = await testRepo.listTestsByOrg(orgId); // <-- adapte le nom si chez toi c'est listByOrg / listByOrganization
+
+ 
+  const catalogTests = await testRepo.listBlueberryCatalogTests(orgId);
+
+  // ✅ 3) Merge + dedupe
+  const tests: TestRef[] = mergeTestsById(orgTests ?? [], catalogTests ?? []);
 
   const listCandidateInvites = makeListCandidateInvites({ inviteRepo, testRepo });
   const invites = await listCandidateInvites({ orgId, candidateId: id });
@@ -71,7 +85,6 @@ export default async function CandidateDetailPage({ params }: Props) {
   const candidate = await candidateRepo.getById(orgId, id);
   if (!candidate) notFound();
 
-  // ✅ NEW: submissions + scoring VM
   const submissions = await testRepo.listSubmissionsByCandidate(id, orgId);
 
   const completedSubmissions = submissions.filter((s) => Boolean(s.completedAt));
@@ -128,7 +141,6 @@ export default async function CandidateDetailPage({ params }: Props) {
       tests={tests}
       testInvites={invites}
       testFlowInfoMap={testFlowInfoMap}
-      // ✅ NEW props for scoring UI
       testSubmissions={submissions}
       latestCompletedSubmission={latestCompletedSubmission}
       latestScoreVM={latestScoreVM}

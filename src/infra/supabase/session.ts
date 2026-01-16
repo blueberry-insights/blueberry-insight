@@ -120,6 +120,12 @@ export async function withAuth<T>(
 ): Promise<T | { ok: false; error: string }> {
   try {
     const ctx = await requireUserAndOrgForAction();
+    console.log("[withAuth]", {
+      userId: ctx.userId,
+      orgId: ctx.orgId,
+      role: ctx.role,
+    });
+    
     return await handler(ctx);
   } catch (err: unknown) {
     const error = err as Error & { code?: string };

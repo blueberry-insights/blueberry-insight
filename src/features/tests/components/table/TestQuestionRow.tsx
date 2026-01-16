@@ -42,10 +42,14 @@ export function TestQuestionRow({
     (question.options ?? []).join("\n")
   );
 
+  // ✅ au lieu d'un “isReversed” opaque, on garde la même donnée mais avec une UI explicite
+  const [isReversed, setIsReversed] = React.useState<boolean>(
+    Boolean(question.isReversed)
+  );
+
   const [pendingSave, startSave] = React.useTransition();
   const [pendingDelete, startDelete] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
-
 
   React.useEffect(() => {
     setLabel(question.label);
@@ -53,6 +57,7 @@ export function TestQuestionRow({
     setMinValue(question.minValue != null ? String(question.minValue) : "");
     setMaxValue(question.maxValue != null ? String(question.maxValue) : "");
     setOptionsText((question.options ?? []).join("\n"));
+    setIsReversed(Boolean(question.isReversed));
     setError(null);
   }, [
     question.id,
@@ -61,6 +66,7 @@ export function TestQuestionRow({
     question.minValue,
     question.maxValue,
     question.options,
+    question.isReversed,
   ]);
 
   const kindLabel =
@@ -78,6 +84,7 @@ export function TestQuestionRow({
     setMinValue(question.minValue != null ? String(question.minValue) : "");
     setMaxValue(question.maxValue != null ? String(question.maxValue) : "");
     setOptionsText((question.options ?? []).join("\n"));
+    setIsReversed(Boolean(question.isReversed));
     setError(null);
   }
 
@@ -104,6 +111,8 @@ export function TestQuestionRow({
               .map((s) => s.trim())
               .filter(Boolean)
           : null,
+      // ✅ only for scale
+      isReversed: kind === "scale" ? isReversed : null,
     };
 
     startSave(async () => {
@@ -130,15 +139,30 @@ export function TestQuestionRow({
     });
   }
 
+  const isScale = question.kind === "scale";
+  const scaleIsReversed = Boolean(question.isReversed);
+
   return (
     <>
       <div className="flex items-start justify-between gap-2 p-1">
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-slate-500">{index + 1}.</span>
+
             <Badge variant="secondary" className="text-[11px]">
               {kindLabel}
             </Badge>
+
+            {/* ✅ VISIBILITÉ DIRECTE : on voit que ça existe sans ouvrir */}
+            {isScale && (
+              <Badge
+                variant={scaleIsReversed ? "destructive" : "outline"}
+                className="text-[11px]"
+              >
+                {scaleIsReversed ? "Inversée" : "Normale"}
+              </Badge>
+            )}
+
             {!question.isRequired && (
               <Badge variant="outline" className="text-[11px] text-slate-500">
                 Facultative
@@ -149,13 +173,16 @@ export function TestQuestionRow({
           <div className="text-sm font-semibold text-slate-900 truncate">
             {question.label}
             <span className="ml-2 text-[10px] text-slate-400">
-            Réf. {question.businessCode ?? ""}
+              Réf. {question.businessCode ?? ""}
             </span>
           </div>
 
-          {question.kind === "scale" && (
+          {isScale && (
             <div className="text-xs text-slate-500">
               Échelle : {question.minValue ?? 0} → {question.maxValue ?? 10}
+              {scaleIsReversed
+                ? " • Sens négatif (inversée)"
+                : " • Sens positif"}
             </div>
           )}
 
@@ -208,7 +235,12 @@ export function TestQuestionRow({
 
             <Select
               value={kind}
-              onValueChange={(v) => setKind(v as TestQuestion["kind"])}
+              onValueChange={(v) => {
+                const next = v as TestQuestion["kind"];
+                setKind(next);
+                // ✅ si on sort de scale, on neutralise le reverse
+                if (next !== "scale") setIsReversed(false);
+              }}
               disabled={pendingSave || pendingDelete}
             >
               <SelectTrigger>
@@ -243,6 +275,56 @@ export function TestQuestionRow({
               <div className="md:col-span-2" />
             )}
           </div>
+
+          {/* ✅ UX : “Sens de l’item” (normal/inversé) au lieu d’une checkbox obscure */}
+          {kind === "scale" && (
+            <div className="rounded-lg border border-slate-200 bg-white/60 p-3 space-y-2">
+              <div className="text-sm font-medium text-slate-900">
+                Sens de l’item
+              </div>
+
+              <label className="flex items-start gap-2 text-sm text-slate-700">
+                <input
+                  type="radio"
+                  name={`scale-sense-${question.id}`}
+                  className="h-4 w-4 mt-0.5"
+                  checked={!isReversed}
+                  onChange={() => setIsReversed(false)}
+                  disabled={pendingSave || pendingDelete}
+                />
+                <span>
+                  <span className="font-medium">Normal</span> — Plus je suis
+                  d’accord, plus c’est positif.
+                  <span className="block text-[11px] text-slate-500">
+                    Exemple : 5 = très bon / 1 = pas bon
+                  </span>
+                </span>
+              </label>
+
+              <label className="flex items-start gap-2 text-sm text-slate-700">
+                <input
+                  type="radio"
+                  name={`scale-sense-${question.id}`}
+                  className="h-4 w-4 mt-0.5"
+                  checked={isReversed}
+                  onChange={() => setIsReversed(true)}
+                  disabled={pendingSave || pendingDelete}
+                />
+                <span>
+                  <span className="font-medium">Inversé</span> — Plus je suis
+                  d’accord, plus c’est négatif (score inversé automatiquement).
+                  <span className="block text-[11px] text-slate-500">
+                    Exemple : 5 = mauvais / 1 = bon
+                  </span>
+                </span>
+              </label>
+
+              <p className="text-[11px] text-slate-500">
+                Astuce : utilise “Inversé” pour les items formulés négativement
+                (ex: “J’attends qu’on me dise quoi faire.”).
+              </p>
+            </div>
+          )}
 
           {kind === "choice" && (
             <div className="space-y-1">

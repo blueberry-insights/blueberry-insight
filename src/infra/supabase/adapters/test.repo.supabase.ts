@@ -23,9 +23,20 @@ import type {
   UpdateQuestionInput,
   DeleteTestInput,
   TestDimensionInput,
+  BlueberryCatalogTest,
+  MotivationScoringResult,
 } from "@/core/models/Test";
 
 type Db = SupabaseClient<Database>;
+
+import { env } from "@/config/env";
+
+const BLUEBERRY_ORG_ID = env.BLUEBERRY_ORG_ID;
+
+type GetTestWithQuestionsResult = {
+  test: Tables<"tests">;
+  questions: Tables<"test_questions">[];
+};
 
 function mapTestRow(row: Tables<"tests">): Test {
   return {
@@ -55,6 +66,7 @@ function mapSubmissionRow(row: Tables<"test_submissions">): TestSubmission {
     flowId: row.flow_id ?? null,
     flowItemId: row.flow_item_id ?? null,
     completedAt: row.completed_at ?? null,
+    scoringResult: (row.scoring_result as MotivationScoringResult | null) ?? null
   };
 }
 
@@ -89,6 +101,8 @@ function mapQuestionRow(row: Tables<"test_questions">): TestQuestion {
     businessCode: row.business_code ?? null,
     dimensionCode: row.dimension_code ?? null,
     dimensionOrder: row.dimension_order ?? null,
+    scoringType: (row.scoring_type as "likert" | "forced_choice" | "desirability" | "none" | null) ?? null,
+    isReversed: row.is_reversed ?? null
   };
 }
 
@@ -242,7 +256,22 @@ export function makeTestRepo(sb: Db): TestRepo {
         questions: (questions ?? []).map(mapQuestionRow),
       };
     },
-
+    async getTestWithQuestionsAnyOrg(testId: string, orgId: string) {
+      const { data, error } = await sb.rpc("get_test_with_questions_any_org", {
+        p_org_id: orgId,
+        p_test_id: testId,
+        p_blueberry_org_id: BLUEBERRY_ORG_ID as string,
+      });
+    
+      if (error) throw error;
+      if (!data) return null;
+    
+      const typed = data as GetTestWithQuestionsResult;
+      return {
+        test: mapTestRow(typed.test),
+        questions: (typed.questions ?? []).map(mapQuestionRow),
+      };
+    },
     async addQuestion(input: CreateQuestionInput): Promise<TestQuestion> {
       const dimensionCode = (input.dimensionCode ?? "").trim();
       if (!dimensionCode) throw new Error("dimensionCode est obligatoire");
@@ -272,6 +301,7 @@ export function makeTestRepo(sb: Db): TestRepo {
 
     async updateQuestion(input: UpdateQuestionInput): Promise<TestQuestion> {
       const patch: TablesUpdate<"test_questions"> = {
+        org_id: input.orgId,
         label: input.label,
         kind: input.kind,
         min_value: input.kind === "scale" ? (input.minValue ?? null) : null,
@@ -282,22 +312,32 @@ export function makeTestRepo(sb: Db): TestRepo {
                 null) as TablesUpdate<"test_questions">["options"])
             : null,
         is_required: input.isRequired ?? true,
+        is_reversed : input.kind === "scale" ? ((input as UpdateQuestionInput & { isReversed?: boolean | null }).isReversed ?? false) : null,
       };
 
       const { data, error } = await sb
-        .from("test_questions")
-        .update(patch)
-        .eq("id", input.questionId)
-        .eq("org_id", input.orgId)
-        .select("*")
-        .single();
+      .from("test_questions")
+      .update(patch)
+      .eq("id", input.questionId)
+      .eq("org_id", input.orgId)
+      .select("*"); // <- PAS de single
+    
+    if (error) {
+      console.error("[TestRepo.updateQuestion] error", error);
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      // 99% : RLS a bloqué OU filtre org/id ne matche pas
+      throw new Error(
+        "Update refusé (0 row). Vérifie RLS sur test_questions (UPDATE) et que org_id/id matchent."
+      );
+    }
+    
+    return mapQuestionRow(data[0]);
+    
 
-      if (error || !data) {
-        console.error("[TestRepo.updateQuestion] error", error);
-        throw error ?? new Error("Failed to update question");
-      }
-
-      return mapQuestionRow(data);
+    
     },
 
     async updateDimensionTitle({ orgId, dimensionId, title }) {
@@ -414,8 +454,15 @@ export function makeTestRepo(sb: Db): TestRepo {
       submission: TestSubmission;
       answers: TestAnswer[];
     }> {
-      const { orgId, submissionId, answers, numericScore, maxScore } = input;
-
+      const {
+        orgId,
+        submissionId,
+        answers,
+        numericScore,
+        maxScore,
+        scoringResult, // ✅ le bon champ
+      } = input;
+    
       // 0) Guard : submission existe + pas déjà complétée
       const { data: s, error: sErr } = await sb
         .from("test_submissions")
@@ -423,24 +470,24 @@ export function makeTestRepo(sb: Db): TestRepo {
         .eq("id", submissionId)
         .eq("org_id", orgId)
         .maybeSingle();
-
+    
       if (sErr) throw sErr;
       if (!s) throw new Error("Submission introuvable.");
       if (s.completed_at) throw new Error("Cette submission est déjà complétée.");
-
+    
       // 0bis) Anti-retry : si des réponses existent déjà -> refuse
       const { count, error: cErr } = await sb
         .from("test_answers")
         .select("*", { count: "exact", head: true })
         .eq("org_id", orgId)
         .eq("submission_id", submissionId);
-
+    
       if (cErr) throw cErr;
       if ((count ?? 0) > 0) {
         throw new Error("Des réponses existent déjà pour cette submission.");
       }
-
-      // 1) Insert answers
+    
+      // 1) Insert answers (PAS de scoring ici)
       const rows: TablesInsert<"test_answers">[] = answers.map((a) => ({
         org_id: orgId,
         submission_id: submissionId,
@@ -448,25 +495,28 @@ export function makeTestRepo(sb: Db): TestRepo {
         value_text: a.valueText ?? null,
         value_number: a.valueNumber ?? null,
       }));
-
+    
       const { data: inserted, error: insertError } = await sb
         .from("test_answers")
         .insert(rows)
         .select("*");
-
+    
       if (insertError || !inserted) {
         console.error("[TestRepo.submitAnswers] insert answers error", insertError);
         throw insertError ?? new Error("Failed to insert test answers");
       }
-
-      // 2) Update submission (score + completed_at)
+    
+      // 2) Update submission (score + completed_at + scoring_result)
       const patch: TablesUpdate<"test_submissions"> = {
         completed_at: new Date().toISOString(),
       };
-
+    
       if (numericScore !== undefined) patch.numeric_score = numericScore;
       if (maxScore !== undefined) patch.max_score = maxScore;
-
+    
+      // ✅ Nouveau : scoring_result jsonb
+      if (scoringResult !== undefined) patch.scoring_result = scoringResult as MotivationScoringResult;
+    
       const { data: updated, error: updErr } = await sb
         .from("test_submissions")
         .update(patch)
@@ -474,18 +524,19 @@ export function makeTestRepo(sb: Db): TestRepo {
         .eq("org_id", orgId)
         .select("*")
         .single();
-
+    
       if (updErr || !updated) {
         console.error("[TestRepo.submitAnswers] update submission error", updErr);
         throw updErr ?? new Error("Failed to update submission");
       }
-
+    
       return {
         submission: mapSubmissionRow(updated),
         answers: inserted.map(mapAnswerRow),
       };
     },
-
+    
+    
     async listSubmissionsByCandidate(candidateId: string, orgId: string): Promise<TestSubmission[]> {
       const { data, error } = await sb
         .from("test_submissions")
@@ -774,7 +825,19 @@ export function makeTestRepo(sb: Db): TestRepo {
       if (error) throw error;
       return count ?? 0;
     },
-
+    async listBlueberryCatalogTests(activeOrgId: string): Promise<BlueberryCatalogTest[]> {
+      const { data, error } = await sb.rpc("list_blueberry_test_catalog", {
+        p_org_id: activeOrgId,
+      });
+      if (error) throw error;
+    
+      return (data ?? []).map((r: { id: string; name: string; type: string }) => ({
+        id: r.id,
+        name: r.name,
+        type: r.type as TestType,
+      }));
+    },
+    
     async areAllFlowTestsCompleted({
       orgId,
       candidateId,

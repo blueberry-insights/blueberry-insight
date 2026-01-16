@@ -2,19 +2,20 @@
 "use client";
 
 import { useTransition } from "react";
-import type { Test } from "@/core/models/Test";
-import type { TestFlow, TestFlowItem } from "@/core/models/TestFlow"; // ou le type retourné par ton usecase
+import type { TestFlow, TestFlowItem } from "@/core/models/TestFlow"; 
+import type { BlueberryCatalogTest } from "@/core/models/Test";
 import { TestFlowEditor } from "../TestFlowEditor";
 import { GenericForm } from "@/shared/ui";
 import { FormSubmit } from "@/shared/ui/forms";
 import { createFlowForOfferAction } from "@/app/(app)/offers/[id]/tests/actions";
 import { useToast } from "@/shared/hooks/useToast";
 
+
 type Props = {
   offerId: string;
   flowData: TestFlow | null;
   items: TestFlowItem[];
-  tests: Test[];
+  tests: BlueberryCatalogTest[];
 };
 
 export function TestOfferScreen({ offerId, flowData, items, tests }: Props) {

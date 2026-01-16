@@ -4,7 +4,7 @@ import type { TestRepo } from "@/core/ports/TestRepo";
 
 const InputSchema = z.object({
   orgId: z.string().uuid(),
-  testId: z.string().uuid(),      
+  id: z.string().uuid(),      
   name: z.string().min(1, "Le nom du questionnaire est obligatoire"),
   description: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
@@ -15,7 +15,7 @@ export function makeUpdateTest(testRepo: TestRepo) {
     const input = InputSchema.parse(raw);
 
     const updated = await testRepo.updateTest({
-      id: input.testId,           
+      id: input.id,           
       orgId: input.orgId,
       name: input.name,
       description: input.description ?? null,

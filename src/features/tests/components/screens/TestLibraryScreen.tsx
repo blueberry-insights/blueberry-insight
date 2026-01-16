@@ -13,13 +13,15 @@ import {
   duplicateTestAction,
   archiveTestAction,
 } from "@/app/(app)/tests/action";
+type TargetOrg = { id: string; name: string; slug: string };
 
 type Props = {
   orgId: string;
   initialTests: Test[];
+  targetOrgs: TargetOrg[];
 };
 
-export function TestLibraryScreen({ orgId, initialTests }: Props) {
+export function TestLibraryScreen({ orgId, initialTests, targetOrgs }: Props) {
   const [tests, setTests] = useState<Test[]>(initialTests);
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -165,17 +167,21 @@ export function TestLibraryScreen({ orgId, initialTests }: Props) {
       />
 
       <CreateTestModal
+        key={`create-test-modal-${createModalOpen}`}
         open={createModalOpen}
         onClose={handleCloseCreate}
         orgId={orgId}
         onCreated={handleCreated}
+        targetOrgs={targetOrgs ?? []}
       />
 
       <UpdateTestModal
+      key={`update-test-${testToUpdate?.id ?? "none"}-${updateModalOpen ? "open" : "closed"}`}
         open={updateModalOpen}
         onClose={handleCloseUpdate}
         onUpdated={handleTestUpdated}
         test={testToUpdate}
+        targetOrgs={targetOrgs ?? []}
       />
 
       <ArchiveTestModal

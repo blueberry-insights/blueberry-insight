@@ -12,11 +12,12 @@ import { TestQuestionRow } from "./table/TestQuestionRow";
 
 type Props = {
   testId: string;
+  testOrgId: string;
   questions: TestQuestion[];
   onDeleteLocal: (id: string) => void;
 };
 
-export function TestQuestionsEditor({ testId, questions, onDeleteLocal }: Props) {
+export function TestQuestionsEditor({ testId, testOrgId, questions, onDeleteLocal }: Props) {
   const router = useRouter();
   const { toast } = useToast();
 
@@ -43,6 +44,7 @@ export function TestQuestionsEditor({ testId, questions, onDeleteLocal }: Props)
     if (!target) return;
 
     const fd = new FormData();
+    fd.set("orgId", testOrgId);
     fd.set("testId", testId);
     fd.set("questionId", questionId);
 
@@ -52,6 +54,7 @@ export function TestQuestionsEditor({ testId, questions, onDeleteLocal }: Props)
 
     fd.set("label", String(patch.label ?? target.label ?? ""));
     fd.set("kind", String(patch.kind ?? target.kind ?? ""));
+    fd.set("isReversed", String(patch.isReversed ?? target.isReversed ?? ""));
 
     const kind = patch.kind ?? target.kind;
 
@@ -99,6 +102,7 @@ export function TestQuestionsEditor({ testId, questions, onDeleteLocal }: Props)
 
     const fd = new FormData();
     fd.set("testId", testId);
+    fd.set("orgId", testOrgId);
     fd.set("questionId", questionId);
     fd.set("dimensionCode", dimensionCode ?? "");
     const res = await deleteQuestionAction(fd);

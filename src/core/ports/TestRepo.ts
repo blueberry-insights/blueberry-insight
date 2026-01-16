@@ -17,8 +17,8 @@ import type {
   DeleteTestInput,
   CreateSubmissionItemsInput,
   TestDimensionInput,
+  BlueberryCatalogTest,
 } from "../models/Test";
-import type { CandidateStatus } from "../models/Candidate";
 
 export interface TestRepo {
   listTestsByOrg(orgId: string): Promise<Test[]>;
@@ -31,13 +31,14 @@ export interface TestRepo {
     testId: string,
     orgId: string
   ): Promise<{ test: Test; questions: TestQuestion[] } | null>;
+  getTestWithQuestionsAnyOrg(testId: string, orgId: string): Promise<{ test: Test; questions: TestQuestion[] } | null>;
   updateDimensionTitle(input: {
     orgId: string;
     dimensionId: string;
     title: string;
   }): Promise<void>;
+  listBlueberryCatalogTests(activeOrgId: string): Promise<BlueberryCatalogTest[]>;
 
-  // ---------------------------------------------------------------------------
   // QUESTIONS
   // ---------------------------------------------------------------------------
   addQuestion(input: CreateQuestionInput): Promise<TestQuestion>;

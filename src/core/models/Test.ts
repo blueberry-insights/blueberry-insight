@@ -1,13 +1,35 @@
-
 export type TestType = "motivations" | "scenario";
+export type BlueberryCatalogTest = {
+  id: string;
+  name: string;
+  type: TestType;
+};
 
-export type TestQuestionKind =
-  | "yes_no"
-  | "scale"
-  | "choice"
-  | "long_text";
+export type MotivationLevel =
+  | "very_low"
+  | "low"
+  | "moderate"
+  | "high"
+  | "very_high";
 
-  export type TestInviteStatus = "pending" | "completed" | "revoked" | "expired";
+export type MotivationDimensionScore = {
+  dimensionCode: string;
+  average: number;
+  level: MotivationLevel;
+};
+
+export type MotivationScoringResult = {
+  version: "v2.5";
+  global: {
+    average: number;
+    level: MotivationLevel;
+  };
+  dimensions: MotivationDimensionScore[];
+};
+
+export type TestQuestionKind = "yes_no" | "scale" | "choice" | "long_text";
+
+export type TestInviteStatus = "pending" | "completed" | "revoked" | "expired";
 
 export interface Test {
   id: string;
@@ -21,6 +43,8 @@ export interface Test {
   archivedAt?: string | null;
 }
 
+export type TestRef = Pick<Test, "id" | "name" | "type">;
+
 export interface TestInvite {
   id: string;
   orgId: string;
@@ -28,11 +52,11 @@ export interface TestInvite {
   testId: string;
   flowItemId?: string | null;
 
-  token: string;             
+  token: string;
   status: TestInviteStatus;
 
-  expiresAt: string;          
-  createdAt: string;        
+  expiresAt: string;
+  createdAt: string;
   sentAt?: string | null;
   completedAt?: string | null;
 
@@ -50,10 +74,12 @@ export interface TestQuestion {
   options?: string[] | null;
   orderIndex: number;
   isRequired: boolean;
-  createdAt: string; // ISO 
-  businessCode?: string | null;      // ex: "D1.1"
-  dimensionCode?: string | null;     // ex: "D1"
+  createdAt: string; // ISO
+  businessCode?: string | null; // ex: "D1.1"
+  dimensionCode?: string | null; // ex: "D1"
   dimensionOrder?: number | null;
+  scoringType?: "likert" | "forced_choice" | "desirability" | "none" | null;
+  isReversed?: boolean | null;
 }
 
 export interface TestSubmission {
@@ -69,6 +95,7 @@ export interface TestSubmission {
   flowId?: string | null;
   flowItemId?: string | null;
   completedAt?: string | null;
+  scoringResult?: MotivationScoringResult | null;
 }
 
 export interface TestAnswer {
@@ -190,8 +217,8 @@ export interface SubmitTestAnswersInput {
   submissionId: string;
   answers: {
     questionId: string;
-    valueText?: string;
-    valueNumber?: number;
+    valueNumber?: number | null;
+    valueText?: string | null;
   }[];
   /**
    * Optionnel : score calculé côté usecase pour type = "motivations"
@@ -199,6 +226,7 @@ export interface SubmitTestAnswersInput {
    */
   numericScore?: number;
   maxScore?: number;
+  scoringResult?: MotivationScoringResult | null;
 }
 
 export interface CreateTestReviewInput {
