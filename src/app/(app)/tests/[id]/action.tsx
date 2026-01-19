@@ -30,6 +30,7 @@ export async function createQuestionAction(
         ? Number(formData.get("dimensionOrder"))
         : undefined;
 
+      const context = String(formData.get("context") ?? "").trim() || undefined;
       const isReversedRaw = formData.get("isReversed");
       const isReversed =
         isReversedRaw == null
@@ -42,7 +43,7 @@ export async function createQuestionAction(
           error: "testId, libellé, type et dimensionCode sont obligatoires",
         };
       }
-
+  
       const raw = {
         orgId: ctx.orgId,
         testId,
@@ -66,6 +67,7 @@ export async function createQuestionAction(
         dimensionCode: dimensionCode || undefined,
         dimensionOrder: dimensionOrder || undefined,
         isReversed,
+        context: context || undefined,
       };
 
       const repo = makeTestRepo(ctx.sb);

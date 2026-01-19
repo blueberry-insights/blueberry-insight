@@ -102,7 +102,8 @@ function mapQuestionRow(row: Tables<"test_questions">): TestQuestion {
     dimensionCode: row.dimension_code ?? null,
     dimensionOrder: row.dimension_order ?? null,
     scoringType: (row.scoring_type as "likert" | "forced_choice" | "desirability" | "none" | null) ?? null,
-    isReversed: row.is_reversed ?? null
+    isReversed: row.is_reversed ?? null,
+    context: row.context ?? null,
   };
 }
 
@@ -289,6 +290,8 @@ export function makeTestRepo(sb: Db): TestRepo {
         p_max_value: isScale ? (input.maxValue ?? undefined) : undefined,
         p_options: isChoice ? (input.options ?? null) : null,
         p_is_required: input.isRequired ?? true,
+        p_is_reversed: isScale ? (input.isReversed ?? false) : false,
+        p_context: input.context ?? undefined,
       });
 
       if (error || !data) {
@@ -475,7 +478,6 @@ export function makeTestRepo(sb: Db): TestRepo {
       if (!s) throw new Error("Submission introuvable.");
       if (s.completed_at) throw new Error("Cette submission est déjà complétée.");
     
-      // ✅ 0bis) Idempotence : on supprime les réponses existantes (safe retry)
       const { error: delErr } = await sb
         .from("test_answers")
         .delete()
@@ -506,7 +508,6 @@ export function makeTestRepo(sb: Db): TestRepo {
         throw insertError ?? new Error("Failed to insert test answers");
       }
     
-      // 2) Update submission (score + completed_at + scoring_result)
       const patch: TablesUpdate<"test_submissions"> = {
         completed_at: new Date().toISOString(),
       };

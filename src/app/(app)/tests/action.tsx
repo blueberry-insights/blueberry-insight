@@ -17,10 +17,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/infra/supabase/types/Database";
 import type { ArchiveTestInput } from "@/core/usecases/tests/editor/archiveTest";
 
-type ArchiveOk = { ok: true };
-type ArchiveErr = { ok: false; error: string };
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
+
+type ArchiveOk = { ok: true };
+type ArchiveErr = { ok: false; error: string };
 
 const BLUEBERRY_ORG_ID = env.BLUEBERRY_ORG_ID;
 
@@ -31,18 +32,18 @@ type Ctx = {
   role: string;
 };
 
-function normalizeTargetOrgIds(formData: FormData): string[] {
-  return Array.from(
-    new Set(
-      formData
-        .getAll("targetOrgIds")
-        .map(String)
-        .map((s) => s.trim())
-        .filter(Boolean)
-    )
-  );
+function uniqIds(ids: string[]): string[] {
+  return Array.from(new Set(ids.map((s) => String(s).trim()).filter(Boolean)));
 }
 
+function normalizeTargetOrgIds(formData: FormData): string[] {
+  return uniqIds(formData.getAll("targetOrgIds").map(String));
+}
+
+/**
+ * Permission "catalog management":
+ * uniquement quand tu es DANS l'orga Blueberry + rôle autorisé.
+ */
 function canManageCatalog(ctx: Pick<Ctx, "orgId" | "role">): boolean {
   return (
     ctx.orgId === BLUEBERRY_ORG_ID &&
@@ -50,18 +51,51 @@ function canManageCatalog(ctx: Pick<Ctx, "orgId" | "role">): boolean {
   );
 }
 
+function getBlueberryOrgId(): string {
+  if (!BLUEBERRY_ORG_ID) {
+    throw new Error("BLUEBERRY_ORG_ID is not defined in env");
+  }
+  return BLUEBERRY_ORG_ID;
+}
+
+/**
+ * Convention actuelle (important) :
+ * - test_catalog_targets = []  => "global" (visible partout)
+ * - test_catalog_targets = [orgIds...] => "targeted"
+ *
+ * Patch: quand exposure=targeted, Blueberry doit être inclus
+ * pour que Blueberry voie toujours ses propres tests.
+ */
+
+function ensureBlueberryIncluded(targetOrgIds: string[]): string[] {
+  const blueberryOrgId = getBlueberryOrgId();
+  return uniqIds([blueberryOrgId, ...targetOrgIds]);
+}
+
+function computeCatalogTargets(input: {
+  exposure: string; // "global" | "targeted"
+  targetOrgIds: string[];
+}): string[] {
+  if (input.exposure === "targeted") {
+    return ensureBlueberryIncluded(input.targetOrgIds);
+  }
+  return []; // global
+}
+
 /**
  * Vérité terrain : est-ce que ce test appartient à l'orga Blueberry ?
  * (Si RLS empêche de le voir -> on le traite comme "non")
  */
-async function isBlueberryCatalogTest(sb: SupabaseClient<Database>, testId: string): Promise<boolean> {
+async function isBlueberryCatalogTest(
+  sb: SupabaseClient<Database>,
+  testId: string
+): Promise<boolean> {
   const { data, error } = await sb
     .from("tests")
     .select("org_id")
     .eq("id", testId)
     .maybeSingle();
 
-  // Si erreur (RLS ou autre), on préfère ne pas faire de targeting
   if (error) return false;
   if (!data) return false;
 
@@ -73,7 +107,7 @@ async function replaceTargetsForTest(
   testId: string,
   targetOrgIds: string[]
 ) {
-  const uniq = Array.from(new Set(targetOrgIds)).filter(Boolean);
+  const uniq = uniqIds(targetOrgIds);
 
   // delete all
   const { error: delErr } = await sb
@@ -87,7 +121,48 @@ async function replaceTargetsForTest(
 
   const rows = uniq.map((orgId) => ({ test_id: testId, org_id: orgId }));
   const { error: insErr } = await sb.from("test_catalog_targets").insert(rows);
+
   if (insErr) throw insErr;
+}
+
+async function getTargetsForTest(
+  sb: SupabaseClient<Database>,
+  testId: string
+): Promise<string[]> {
+  const { data, error } = await sb
+    .from("test_catalog_targets")
+    .select("org_id")
+    .eq("test_id", testId);
+
+  if (error) throw error;
+
+  return (data ?? []).map((r: { org_id: string }) => r.org_id);
+}
+
+/**
+ * Copie la logique d'exposition d'un test source -> test dupliqué
+ * Règle: si source a 0 targets => global => [].
+ * Sinon targeted => targets + Blueberry.
+ */
+async function copyCatalogTargetsIfNeeded(input: {
+  sb: SupabaseClient<Database>;
+  ctx: Ctx;
+  sourceTestId: string;
+  newTestId: string;
+}) {
+  const { sb, ctx, sourceTestId, newTestId } = input;
+
+  if (!canManageCatalog(ctx)) return;
+
+  const sourceIsCatalog = await isBlueberryCatalogTest(sb, sourceTestId);
+  if (!sourceIsCatalog) return;
+
+  const srcOrgIds = await getTargetsForTest(sb, sourceTestId);
+
+  const finalTargets =
+    srcOrgIds.length === 0 ? [] : ensureBlueberryIncluded(srcOrgIds);
+
+  await replaceTargetsForTest(sb, newTestId, finalTargets);
 }
 
 // ------------------------------------------------------------
@@ -107,7 +182,9 @@ export async function createTestAction(
       const exposure = String(formData.get("exposure") ?? "global").trim();
       const targetOrgIds = normalizeTargetOrgIds(formData);
 
-      if (!name || !type) return { ok: false, error: "Nom et type obligatoires" };
+      if (!name || !type) {
+        return { ok: false, error: "Nom et type obligatoires" };
+      }
 
       const repo = makeTestRepo(ctx.sb);
       const usecase = makeCreateTest(repo);
@@ -123,7 +200,7 @@ export async function createTestAction(
 
       // 2) Targeting UNIQUEMENT si on est en orga Blueberry + rôle autorisé
       if (canManageCatalog(ctx)) {
-        const finalTargets = exposure === "targeted" ? targetOrgIds : [];
+        const finalTargets = computeCatalogTargets({ exposure, targetOrgIds });
         await replaceTargetsForTest(ctx.sb, created.id, finalTargets);
       }
 
@@ -131,7 +208,10 @@ export async function createTestAction(
       return { ok: true, data: created };
     } catch (e) {
       console.error("[createTestAction]", e);
-      return { ok: false, error: e instanceof Error ? e.message : "Erreur création test" };
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "Erreur création test",
+      };
     }
   });
 }
@@ -170,7 +250,7 @@ export async function updateTestAction(
       if (canManageCatalog(ctx)) {
         const catalog = await isBlueberryCatalogTest(ctx.sb, testId);
         if (catalog) {
-          const finalTargets = exposure === "targeted" ? targetOrgIds : [];
+          const finalTargets = computeCatalogTargets({ exposure, targetOrgIds });
           await replaceTargetsForTest(ctx.sb, testId, finalTargets);
         }
       }
@@ -179,7 +259,10 @@ export async function updateTestAction(
       return { ok: true, data: updated };
     } catch (e) {
       console.error("[updateTestAction]", e);
-      return { ok: false, error: e instanceof Error ? e.message : "Erreur update test" };
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "Erreur update test",
+      };
     }
   });
 }
@@ -201,11 +284,23 @@ export async function duplicateTestAction(
         createdBy: ctx.userId,
       });
 
+      // IMPORTANT: si c'est un test Blueberry, on copie ses targets
+      // (et on garantit que Blueberry est inclus en targeted)
+      await copyCatalogTargetsIfNeeded({
+        sb: ctx.sb,
+        ctx,
+        sourceTestId: testId,
+        newTestId: duplicated.id,
+      });
+
       revalidatePath("/tests");
       return { ok: true, data: duplicated };
     } catch (e) {
       console.error("[duplicateTestAction]", e);
-      return { ok: false, error: e instanceof Error ? e.message : "Erreur duplication" };
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "Erreur duplication",
+      };
     }
   });
 }
@@ -234,7 +329,10 @@ export async function deleteTestAction(
       return { ok: true, data: null };
     } catch (e) {
       console.error("[deleteTestAction]", e);
-      return { ok: false, error: e instanceof Error ? e.message : "Erreur suppression test" };
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "Erreur suppression test",
+      };
     }
   });
 }
@@ -254,17 +352,17 @@ export async function getTestTargetsAction(
       const catalog = await isBlueberryCatalogTest(ctx.sb, testId);
       if (!catalog) return { ok: true, data: [] };
 
-      const { data, error } = await ctx.sb
-        .from("test_catalog_targets")
-        .select("org_id")
-        .eq("test_id", testId);
+      const orgIds = await getTargetsForTest(ctx.sb, testId);
 
-      if (error) throw error;
-
-      return { ok: true, data: (data ?? []).map((r: { org_id: string }) => r.org_id) };
+      // On renvoie les targets telles quelles (on ne “corrige” pas ici),
+      // car l’UI a besoin de refléter la vérité DB.
+      return { ok: true, data: orgIds };
     } catch (e) {
       console.error("[getTestTargetsAction]", e);
-      return { ok: false, error: e instanceof Error ? e.message : "Erreur get targets" };
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "Erreur get targets",
+      };
     }
   });
 }

@@ -165,21 +165,30 @@ export function TestQuestionsEditor({ testId, testOrgId, questions, onDeleteLoca
           <div className="text-sm font-semibold text-slate-900">{group.dimCode}</div>
 
           <div className="space-y-2">
-            {group.items.map((q, index) => (
-              <div
-                key={q.id}
-                className="flex items-start gap-3 border rounded-lg px-3 py-2"
-              >
-                <div className="flex-1">
-                  <TestQuestionRow
-                    index={index}
-                    question={q}
-                    onUpdate={onUpdate}
-                    onDelete={() => onDelete(q.id, q.dimensionCode)}
-                  />
-                </div>
-              </div>
-            ))}
+          {group.items.map((q, index) => (
+  <div
+    key={q.id}
+    className="flex items-start gap-3 border rounded-lg px-3 py-2"
+  >
+    <div className="flex-1 space-y-2">
+      {/* ✅ CONTEXTE (lecture) */}
+      {typeof q.context === "string" && q.context.trim().length > 0 && (
+        <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap">
+          <div className="text-xs font-medium text-slate-500 mb-1">Contexte</div>
+          {q.context}
+        </div>
+      )}
+
+      <TestQuestionRow
+        index={index}
+        question={q}
+        onUpdate={onUpdate}
+        onDelete={() => onDelete(q.id, q.dimensionCode)}
+      />
+    </div>
+  </div>
+))}
+
           </div>
         </div>
       ))}

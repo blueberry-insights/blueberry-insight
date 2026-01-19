@@ -156,6 +156,7 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
     dimensionCode: defaultDim?.code ?? "",
     dimensionOrder: defaultDim?.orderIndex ?? 1,
     isReversed: false,
+    context: "",
   });
 
   function setCreate<K extends keyof typeof createForm>(
@@ -220,13 +221,15 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
       if (kind === "scale") {
         if (minValue !== "") form.set("minValue", minValue);
         if (maxValue !== "") form.set("maxValue", maxValue);
-        form.set("isReversed", String(createForm.isReversed));
+        form.set("isReversed", String(isReversed));
       }
 
       if (kind === "choice") {
         form.set("options", options);
       }
-
+      if (createForm.context?.trim()) {
+        form.set("context", createForm.context.trim());
+      }
       const res = await createQuestionAction(form);
 
       if (!res.ok) {
@@ -246,6 +249,7 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
       setCreateForm((prev) => ({
         ...prev,
         label: "",
+        context: "",
         kind: (isMotivations ? "yes_no" : "long_text") as QuestionKind,
         minValue: "",
         maxValue: "",
@@ -386,6 +390,28 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
             onSubmit={handleCreateQuestionSubmit}
             className="grid gap-2 md:grid-cols-[2fr,1fr,1fr,1fr]"
           >
+            {/* Contexte (optionnel) */}
+            <div className="md:col-span-4 space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">
+                Contexte (optionnel)
+              </label>
+
+              <textarea
+                name="context"
+                rows={4}
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                placeholder="Contexte visible par le candidat avant la question (ex : situation, contraintes, consignes)."
+                value={createForm.context ?? ""}
+                onChange={(e) => setCreate("context", e.target.value)}
+                disabled={createPending}
+              />
+
+              <div className="flex justify-between text-[11px] text-muted-foreground">
+                <span>Affiché avant la question.</span>
+                <span>{(createForm.context ?? "").length} caractères</span>
+              </div>
+            </div>
+
             {/* Libellé */}
             <Input
               name="label"
@@ -462,41 +488,41 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
                     Sens de l&apos;item
                   </div>
 
-                <label className="flex items-start gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="create-scale-sense"
-                    className="h-4 w-4 mt-0.5"
-                    checked={!createForm.isReversed}
-                    onChange={() => setCreate("isReversed", false)}
-                    disabled={createPending}
-                  />
-                  <span>
-                    <span className="font-medium">Normal</span> — Plus je suis
-                    d’accord, plus c’est positif.
-                    <span className="block text-[11px] text-slate-500">
-                      Exemple : 5 = bon / 1 = mauvais
+                  <label className="flex items-start gap-2 text-sm text-slate-700">
+                    <input
+                      type="radio"
+                      name="create-scale-sense"
+                      className="h-4 w-4 mt-0.5"
+                      checked={!createForm.isReversed}
+                      onChange={() => setCreate("isReversed", false)}
+                      disabled={createPending}
+                    />
+                    <span>
+                      <span className="font-medium">Normal</span> — Plus je suis
+                      d’accord, plus c’est positif.
+                      <span className="block text-[11px] text-slate-500">
+                        Exemple : 5 = bon / 1 = mauvais
+                      </span>
                     </span>
-                  </span>
-                </label>
+                  </label>
 
-                <label className="flex items-start gap-2 text-sm text-slate-700">
-                  <input
-                    type="radio"
-                    name="create-scale-sense"
-                    className="h-4 w-4 mt-0.5"
-                    checked={createForm.isReversed}
-                    onChange={(e) => setCreate("isReversed", e.target.checked)}
-                    disabled={createPending}
-                  />
-                  <span>
-                    <span className="font-medium">Inversé</span> — Plus je suis
-                    d’accord, plus c’est négatif (score inversé).
-                    <span className="block text-[11px] text-slate-500">
-                      Exemple : 5 = mauvais / 1 = bon
+                  <label className="flex items-start gap-2 text-sm text-slate-700">
+                    <input
+                      type="radio"
+                      name="create-scale-sense"
+                      className="h-4 w-4 mt-0.5"
+                      checked={createForm.isReversed}
+                      onChange={(e) => setCreate("isReversed", e.target.checked)}
+                      disabled={createPending}
+                    />
+                    <span>
+                      <span className="font-medium">Inversé</span> — Plus je suis
+                      d’accord, plus c’est négatif (score inversé).
+                      <span className="block text-[11px] text-slate-500">
+                        Exemple : 5 = mauvais / 1 = bon
+                      </span>
                     </span>
-                  </span>
-                </label>
+                  </label>
 
                   <p className="text-[11px] text-slate-500">
                     Utilise &quot;Inversé&quot; pour les items formulés négativement (ex:
@@ -542,30 +568,33 @@ export function TestEditorScreen({ test, questions, dimensions }: Props) {
         {dimsSorted.length === 0
           ? null
           : groups.map(({ dim, questions }) => (
-              <Card key={dim.id} className="p-4 space-y-2">
-                <div className="font-medium">
-                  <span className="font-mono text-xs text-muted-foreground mr-2">
-                    {dim.code}
-                  </span>
-                  {dim.title}
-                </div>
+            <Card key={dim.id} className="p-4 space-y-2">
+              <div className="font-medium">
+                <span className="font-mono text-xs text-muted-foreground mr-2">
+                  {dim.code}
+                </span>
+                {dim.title}
+              </div>
 
-                {questions.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">
-                    Aucune question.
-                  </div>
-                ) : (
-                  <TestQuestionsEditor
-                    testId={test.id}
-                    testOrgId={test.orgId}
-                    questions={questions}
-                    onDeleteLocal={(id) =>
-                      setQuestionList((prev) => prev.filter((q) => q.id !== id))
-                    }
-                  />
-                )}
-              </Card>
-            ))}
+              {questions.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  Aucune question.
+                </div>
+              ) : (
+             
+                <>
+                <TestQuestionsEditor
+                  testId={test.id}
+                  testOrgId={test.orgId}
+                  questions={questions}
+                  onDeleteLocal={(id) =>
+                    setQuestionList((prev) => prev.filter((q) => q.id !== id))
+                  }
+                />
+                </>
+              )}
+            </Card>
+          ))}
       </div>
     </div>
   );

@@ -22,8 +22,6 @@ async function handleGet(_req: NextRequest, { token }: { token: string }) {
   }
 
   const sb = supabaseAdminForPublicRoute();
-  console.log("[candidate POST] service role env present?", Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY));
-
   const testRepo = makeTestRepo(sb);
   const inviteRepo = makeTestInviteRepo(sb);
   const flowRepo = makeTestFlowRepo(sb);

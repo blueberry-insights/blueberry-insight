@@ -607,6 +607,7 @@ export type Database = {
       test_questions: {
         Row: {
           business_code: string | null
+          context: string | null
           created_at: string
           dimension_code: string | null
           dimension_order: number | null
@@ -625,6 +626,7 @@ export type Database = {
         }
         Insert: {
           business_code?: string | null
+          context?: string | null
           created_at?: string
           dimension_code?: string | null
           dimension_order?: number | null
@@ -643,6 +645,7 @@ export type Database = {
         }
         Update: {
           business_code?: string | null
+          context?: string | null
           created_at?: string
           dimension_code?: string | null
           dimension_order?: number | null
@@ -917,8 +920,10 @@ export type Database = {
     Functions: {
       add_test_question: {
         Args: {
+          p_context?: string
           p_dimension_code: string
           p_is_required?: boolean
+          p_is_reversed?: boolean
           p_kind: string
           p_label: string
           p_max_value?: number
@@ -929,6 +934,7 @@ export type Database = {
         }
         Returns: {
           business_code: string | null
+          context: string | null
           created_at: string
           dimension_code: string | null
           dimension_order: number | null
@@ -960,10 +966,13 @@ export type Database = {
         Args: { p_offer_id: string; p_org_id: string }
         Returns: undefined
       }
-      
       archive_test: {
         Args: { p_org_id: string; p_test_id: string }
         Returns: undefined
+      }
+      can_manage_test_dimensions: {
+        Args: { p_org_id: string }
+        Returns: boolean
       }
       get_blueberry_test_catalog_item: {
         Args: { p_org_id: string; p_test_id: string }
@@ -983,6 +992,11 @@ export type Database = {
         Returns: Json
       }
       get_user_org_id: { Args: never; Returns: string }
+      is_blueberry_admin:
+        | { Args: never; Returns: boolean }
+        | { Args: { p_org_id: string }; Returns: boolean }
+      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+      is_org_owner_or_admin: { Args: { p_org_id: string }; Returns: boolean }
       list_blueberry_test_catalog: {
         Args: { p_org_id: string }
         Returns: {

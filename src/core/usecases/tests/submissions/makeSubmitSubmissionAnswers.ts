@@ -53,6 +53,16 @@ export function makeSubmitSubmissionAnswers(deps: {
   }) {
     const { orgId, submissionId, answers, inviteToken } = input;
 
+    if (answers.length > 200) {
+      throw new SubmitSubmissionError("NO_ANSWERS", "Trop de réponses envoyées.");
+    }
+    
+    for (const a of answers) {
+      if (a.valueText && a.valueText.length > 4000) {
+        throw new SubmitSubmissionError("NO_ANSWERS", "Réponse trop longue.");
+      }
+    }
+    
     if (!answers.length) {
       throw new SubmitSubmissionError("NO_ANSWERS", "Aucune réponse envoyée.");
     }

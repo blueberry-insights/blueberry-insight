@@ -170,7 +170,7 @@ export function TestQuestionRow({
             )}
           </div>
 
-          <div className="text-sm font-semibold text-slate-900 truncate">
+          <div className="whitespace-pre-wrap wrap-break-word text-sm font-semibold text-slate-900 truncate">
             {question.label}
             <span className="ml-2 text-[10px] text-slate-400">
               Réf. {question.businessCode ?? ""}

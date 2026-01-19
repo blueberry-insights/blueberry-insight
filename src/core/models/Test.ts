@@ -80,6 +80,7 @@ export interface TestQuestion {
   dimensionOrder?: number | null;
   scoringType?: "likert" | "forced_choice" | "desirability" | "none" | null;
   isReversed?: boolean | null;
+  context?: string | null;
 }
 
 export interface TestSubmission {
@@ -177,6 +178,7 @@ export interface CreateQuestionInput {
   dimensionCode?: string | null;
   dimensionOrder?: number | null;
   isReversed?: boolean | null;
+  context?: string | null;
 }
 
 export interface UpdateQuestionInput {
@@ -189,6 +191,7 @@ export interface UpdateQuestionInput {
   options?: string[] | null;
   isRequired?: boolean;
   isReversed?: boolean | null;
+  context?: string | null;
 }
 
 export interface ReorderQuestionsInput {
