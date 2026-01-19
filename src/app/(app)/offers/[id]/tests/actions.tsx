@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { withAuth } from "@/infra/supabase/session";
 import { makeTestFlowRepo } from "@/infra/supabase/adapters/testFlow.repo.supabase";
+import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
 import type { TestFlowItem } from "@/core/models/TestFlow";
 
 type Err = { ok: false; error: string };
@@ -19,11 +20,15 @@ export async function createFlowForOfferAction(
         return { ok: false, error: "offerId manquant" };
       }
 
+      const offerRepo = makeOfferRepo(ctx.sb);
+      const offer = await offerRepo.getById(ctx.orgId, offerId);
+      const offerName = offer?.title ?? offerId;
+
       const repo = makeTestFlowRepo(ctx.sb);
       const flow = await repo.createFlow({
         orgId: ctx.orgId,
         offerId,
-        name: `Parcours de tests pour ${offerId}`,
+        name: `Parcours - ${offerName}`,
         isActive: true,
         createdBy: ctx.userId,
       });

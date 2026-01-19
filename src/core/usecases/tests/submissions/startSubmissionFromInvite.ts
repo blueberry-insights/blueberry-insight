@@ -16,6 +16,8 @@ export class StartSubmissionError extends Error {
     | "INVITE_EXPIRED"
     | "TEST_NOT_FOUND"
     | "TEST_INACTIVE"
+    | "TEST_NOT_FOUND_ANY_ORG"
+    | "NO_TEST_SUBMISSION"
     | "NO_QUESTIONS";
 
   constructor(code: StartSubmissionError["code"], message?: string) {

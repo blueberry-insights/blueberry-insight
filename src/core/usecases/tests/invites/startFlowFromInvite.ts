@@ -17,7 +17,7 @@ function shuffleQuestions(questions: TestQuestion[]): TestQuestion[] {
 }
 
 export type FlowItemWithContent = TestFlowItem & {
-  questions?: TestQuestion[];
+  questions?: (TestQuestion & { displayIndex: number })[];
   test?: Test;
   submission?: TestSubmission;
 };
@@ -36,6 +36,38 @@ export function makeStartFlowFromInvite(deps: {
   candidateRepo: CandidateRepo;
 }) {
   const { testRepo, inviteRepo, flowRepo, candidateRepo } = deps;
+
+  async function ensureSubmissionItemsSeeded(params: {
+    orgId: string;
+    submissionId: string;
+    questionsWithDisplayIndex: (TestQuestion & { displayIndex: number })[];
+  }): Promise<(TestQuestion & { displayIndex: number })[]> {
+    const { orgId, submissionId, questionsWithDisplayIndex } = params;
+
+    const existingQuestions = await testRepo.getSubmissionQuestionsWithDisplayIndex({
+      orgId,
+      submissionId,
+    });
+
+    if (existingQuestions.length > 0) return existingQuestions;
+
+    // ✅ Si vide => on seed (idempotence côté DB recommandée, mais même sans ça on ne fait ça qu'en fallback)
+    await testRepo.createSubmissionItems({
+      orgId,
+      submissionId,
+      items: questionsWithDisplayIndex.map((q) => ({
+        questionId: q.id,
+        displayIndex: q.displayIndex,
+      })),
+    });
+
+    const seeded = await testRepo.getSubmissionQuestionsWithDisplayIndex({
+      orgId,
+      submissionId,
+    });
+
+    return seeded.length > 0 ? seeded : questionsWithDisplayIndex;
+  }
 
   return async function startFlowFromInvite(input: {
     orgId: string;
@@ -60,17 +92,11 @@ export function makeStartFlowFromInvite(deps: {
     }
 
     if (invite.status === "revoked") {
-      throw new StartSubmissionError(
-        "INVITE_REVOKED",
-        "Cette invitation a été révoquée."
-      );
+      throw new StartSubmissionError("INVITE_REVOKED", "Cette invitation a été révoquée.");
     }
 
     if (invite.status === "completed") {
-      throw new StartSubmissionError(
-        "INVITE_COMPLETED",
-        "Ce test a déjà été complété."
-      );
+      throw new StartSubmissionError("INVITE_COMPLETED", "Ce test a déjà été complété.");
     }
 
     const expires = new Date(invite.expiresAt);
@@ -118,9 +144,14 @@ export function makeStartFlowFromInvite(deps: {
           return item as FlowItemWithContent;
         }
 
-        const testWithQuestions = await testRepo.getTestWithQuestions(item.testId, orgId);
+        // ✅ IMPORTANT : charger via ANY ORG (catalogue Blueberry accessible)
+        const testWithQuestions = await testRepo.getTestWithQuestionsAnyOrg(
+          item.testId,
+          orgId
+        );
 
         if (!testWithQuestions) {
+          // on renvoie l'item mais il sera bloqué par les guard rails plus bas
           return {
             ...item,
             questions: [],
@@ -144,18 +175,14 @@ export function makeStartFlowFromInvite(deps: {
         if (existing) {
           submission = existing;
 
-          // récupérer l'ordre figé si existant
-          const existingQuestions = await testRepo.getSubmissionQuestionsWithDisplayIndex({
+          // ✅ ensure seed si submission_items manquent
+          questionsWithDisplayIndex = await ensureSubmissionItemsSeeded({
             orgId,
             submissionId: submission.id,
+            questionsWithDisplayIndex,
           });
-
-          if (existingQuestions.length > 0) {
-            questionsWithDisplayIndex = existingQuestions;
-          }
         } else if (item.id === invite.flowItemId && invite.submissionId) {
           // ✅ 2) Cas legacy / sécurité : l’invite pointe déjà une submissionId
-          // On tente de la charger et de l’utiliser (si elle existe)
           try {
             const aggregate = await testRepo.getSubmissionWithAnswers({
               submissionId: invite.submissionId,
@@ -163,21 +190,18 @@ export function makeStartFlowFromInvite(deps: {
             });
             submission = aggregate.submission;
 
-            const existingQuestions = await testRepo.getSubmissionQuestionsWithDisplayIndex({
+            // ✅ ensure seed si submission_items manquent
+            questionsWithDisplayIndex = await ensureSubmissionItemsSeeded({
               orgId,
               submissionId: invite.submissionId,
+              questionsWithDisplayIndex,
             });
-
-            if (existingQuestions.length > 0) {
-              questionsWithDisplayIndex = existingQuestions;
-            }
           } catch {
-            // si ça casse, on retombe sur une création propre juste en dessous
             submission = undefined;
           }
         }
 
-        // ✅ 3) Si toujours pas de submission => on en crée une propre (idempotence déjà assurée)
+        // ✅ 3) Si toujours pas de submission => on en crée une propre
         if (!submission) {
           submission = await testRepo.startSubmission({
             orgId,
@@ -229,8 +253,14 @@ export function makeStartFlowFromInvite(deps: {
     const currentItemIndex = 0;
     const currentItem = enrichedItems[currentItemIndex];
 
-    // 8) Guard rails : si item courant = test, vérifier actif + questions
-    if (currentItem.kind === "test" && currentItem.test) {
+    // 8) Guard rails : si item courant = test, vérifier actif + questions + submission
+    if (currentItem.kind === "test") {
+      if (!currentItem.test) {
+        throw new StartSubmissionError(
+          "TEST_NOT_FOUND",
+          "Le test associé à cette étape est introuvable."
+        );
+      }
       if (!currentItem.test.isActive) {
         throw new StartSubmissionError(
           "TEST_INACTIVE",
@@ -241,6 +271,12 @@ export function makeStartFlowFromInvite(deps: {
         throw new StartSubmissionError(
           "NO_QUESTIONS",
           "Aucune question n'est configurée pour ce test."
+        );
+      }
+      if (!currentItem.submission) {
+        throw new StartSubmissionError(
+          "NO_TEST_SUBMISSION",
+          "Impossible de démarrer la submission pour ce test."
         );
       }
     }

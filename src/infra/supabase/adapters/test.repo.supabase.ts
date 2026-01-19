@@ -4,7 +4,6 @@ import type {
   Tables,
   TablesInsert,
   TablesUpdate,
-  Json,
 } from "../types/Database";
 import type { TestRepo } from "@/core/ports/TestRepo";
 import type {
@@ -280,71 +279,21 @@ export function makeTestRepo(sb: Db): TestRepo {
       const isScale = input.kind === "scale";
       const isChoice = input.kind === "choice";
 
-      // Construire les paramètres de la RPC
-      const rpcParams: {
-        p_org_id: string;
-        p_test_id: string;
-        p_dimension_code: string;
-        p_label: string;
-        p_kind: string;
-        p_is_required: boolean;
-        p_min_value?: number;
-        p_max_value?: number;
-        p_options?: Json;
-      } = {
+      const { data, error } = await sb.rpc("add_test_question", {
         p_org_id: input.orgId,
         p_test_id: input.testId,
         p_dimension_code: dimensionCode,
         p_label: input.label,
         p_kind: input.kind,
+        p_min_value: isScale ? (input.minValue ?? undefined) : undefined,
+        p_max_value: isScale ? (input.maxValue ?? undefined) : undefined,
+        p_options: isChoice ? (input.options ?? null) : null,
         p_is_required: input.isRequired ?? true,
-      };
-
-      // Ajouter min/max seulement si c'est une scale et que les valeurs sont définies
-      if (isScale) {
-        if (input.minValue !== undefined && input.minValue !== null) {
-          rpcParams.p_min_value = input.minValue;
-        }
-        if (input.maxValue !== undefined && input.maxValue !== null) {
-          rpcParams.p_max_value = input.maxValue;
-        }
-      }
-
-      // Ajouter options seulement si c'est un choice
-      if (isChoice && input.options) {
-        rpcParams.p_options = input.options as Json;
-      }
-
-      const { data, error } = await sb.rpc("add_test_question", rpcParams);
+      });
 
       if (error || !data) {
         console.error("[TestRepo.addQuestion] rpc error", error);
         throw error ?? new Error("Failed to add question");
-      }
-
-      // Mettre à jour is_reversed si nécessaire (la RPC ne le supporte pas encore)
-      // On met à jour même si c'est false (car false est une valeur valide)
-      if (isScale && input.isReversed !== undefined) {
-        const { error: updateError } = await sb
-          .from("test_questions")
-          .update({ is_reversed: input.isReversed ?? false })
-          .eq("id", data.id);
-        
-        if (updateError) {
-          console.error("[TestRepo.addQuestion] update is_reversed error", updateError);
-          // On continue quand même, ce n'est pas bloquant
-        } else {
-          // Récupérer la question mise à jour pour retourner les bonnes données
-          const { data: updatedData, error: fetchError } = await sb
-            .from("test_questions")
-            .select("*")
-            .eq("id", data.id)
-            .single();
-          
-          if (!fetchError && updatedData) {
-            return mapQuestionRow(updatedData);
-          }
-        }
       }
 
       return mapQuestionRow(data);
@@ -363,7 +312,7 @@ export function makeTestRepo(sb: Db): TestRepo {
                 null) as TablesUpdate<"test_questions">["options"])
             : null,
         is_required: input.isRequired ?? true,
-        is_reversed: input.kind === "scale" ? (input.isReversed ?? null) : null,
+        is_reversed : input.kind === "scale" ? ((input as UpdateQuestionInput & { isReversed?: boolean | null }).isReversed ?? false) : null,
       };
 
       const { data, error } = await sb
@@ -511,7 +460,7 @@ export function makeTestRepo(sb: Db): TestRepo {
         answers,
         numericScore,
         maxScore,
-        scoringResult, // ✅ le bon champ
+        scoringResult,
       } = input;
     
       // 0) Guard : submission existe + pas déjà complétée
@@ -526,19 +475,19 @@ export function makeTestRepo(sb: Db): TestRepo {
       if (!s) throw new Error("Submission introuvable.");
       if (s.completed_at) throw new Error("Cette submission est déjà complétée.");
     
-      // 0bis) Anti-retry : si des réponses existent déjà -> refuse
-      const { count, error: cErr } = await sb
+      // ✅ 0bis) Idempotence : on supprime les réponses existantes (safe retry)
+      const { error: delErr } = await sb
         .from("test_answers")
-        .select("*", { count: "exact", head: true })
+        .delete()
         .eq("org_id", orgId)
         .eq("submission_id", submissionId);
     
-      if (cErr) throw cErr;
-      if ((count ?? 0) > 0) {
-        throw new Error("Des réponses existent déjà pour cette submission.");
+      if (delErr) {
+        console.error("[TestRepo.submitAnswers] delete answers error", delErr);
+        throw delErr;
       }
     
-      // 1) Insert answers (PAS de scoring ici)
+      // 1) Insert answers
       const rows: TablesInsert<"test_answers">[] = answers.map((a) => ({
         org_id: orgId,
         submission_id: submissionId,
@@ -564,9 +513,9 @@ export function makeTestRepo(sb: Db): TestRepo {
     
       if (numericScore !== undefined) patch.numeric_score = numericScore;
       if (maxScore !== undefined) patch.max_score = maxScore;
-    
-      // ✅ Nouveau : scoring_result jsonb
-      if (scoringResult !== undefined) patch.scoring_result = scoringResult as MotivationScoringResult;
+      if (scoringResult !== undefined) {
+        patch.scoring_result = scoringResult as MotivationScoringResult;
+      }
     
       const { data: updated, error: updErr } = await sb
         .from("test_submissions")
@@ -578,6 +527,7 @@ export function makeTestRepo(sb: Db): TestRepo {
     
       if (updErr || !updated) {
         console.error("[TestRepo.submitAnswers] update submission error", updErr);
+    
         throw updErr ?? new Error("Failed to update submission");
       }
     
@@ -586,8 +536,6 @@ export function makeTestRepo(sb: Db): TestRepo {
         answers: inserted.map(mapAnswerRow),
       };
     },
-    
-    
     async listSubmissionsByCandidate(candidateId: string, orgId: string): Promise<TestSubmission[]> {
       const { data, error } = await sb
         .from("test_submissions")

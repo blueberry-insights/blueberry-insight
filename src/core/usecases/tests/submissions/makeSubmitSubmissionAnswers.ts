@@ -207,7 +207,10 @@ export function makeSubmitSubmissionAnswers(deps: {
     }
 
     // 7) Récupérer test + questions pour le scoring
-    const testWithQuestions = await testRepo.getTestWithQuestionsAnyOrg(submission.testId, orgId);
+    const testWithQuestions = await testRepo.getTestWithQuestionsAnyOrg(
+      submission.testId,
+      orgId
+    );
 
     if (!testWithQuestions) {
       throw new SubmitSubmissionError(
@@ -238,8 +241,14 @@ export function makeSubmitSubmissionAnswers(deps: {
         answers,
       });
 
-      numericScore = scoring.numericScore ?? undefined;
+      // ✅ DB attend un INTEGER → on force ici
+      numericScore =
+        scoring.numericScore == null
+          ? undefined
+          : Math.round(scoring.numericScore);
+
       maxScore = scoring.maxScore ?? undefined;
+
       scoringResult = scoring.scoringResult ?? null;
     }
 
@@ -250,7 +259,7 @@ export function makeSubmitSubmissionAnswers(deps: {
       answers,
       numericScore,
       maxScore,
-      scoringResult // ✅ nouveau champ (jsonb) sur submission
+      scoringResult, // ✅ nouveau champ (jsonb) sur submission
     });
 
     // 11) Marquer l'invitation comme complétée (si fournie)

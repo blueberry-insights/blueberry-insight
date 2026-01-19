@@ -1,7 +1,7 @@
 // app/candidate/test/[token]/CandidateFlowClient.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { TestFlow } from "@/core/models/TestFlow";
 import type { TestQuestion } from "@/core/models/Test";
 import type { FlowItemWithContent } from "@/core/usecases/tests";
@@ -35,26 +35,62 @@ export default function CandidateFlowClient({
   currentItemIndex,
 }: Props) {
   const [currentIndex, setCurrentIndex] = useState(currentItemIndex);
-
   const [answersByItemId, setAnswersByItemId] = useState<AnswersByItemId>({});
-
-  const [submittedByItemId, setSubmittedByItemId] = useState<SubmittedByItemId>(
-    {}
-  );
+  const [submittedByItemId, setSubmittedByItemId] =
+    useState<SubmittedByItemId>({});
+  const [flowDone, setFlowDone] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const currentItem = items[currentIndex];
+  const orderedItems = useMemo(() => {
+    return [...items].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  }, [items]);
+
+  const currentItem = orderedItems[currentIndex];
 
   const answers: AnswerState = useMemo(() => {
-    return answersByItemId[currentItem.id] ?? {};
-  }, [answersByItemId, currentItem.id]);
+    return answersByItemId[currentItem?.id] ?? {};
+  }, [answersByItemId, currentItem?.id]);
 
-  const isCurrentSubmitted = submittedByItemId[currentItem.id] ?? false;
-  const isLast = currentIndex === items.length - 1;
+  const isCurrentSubmitted = submittedByItemId[currentItem?.id] ?? false;
+
+  const isLastItem = currentIndex === orderedItems.length - 1;
+  const canFinish =
+    currentItem?.kind === "video" ||
+    (currentItem?.kind === "test" && isCurrentSubmitted);
+
+  useEffect(() => {
+    if (!currentItem || currentItem.kind !== "test") return;
+
+    const questions = currentItem.questions;
+    if (!questions || questions.length === 0) return;
+
+    setAnswersByItemId((prev) => {
+      const existing = prev[currentItem.id] ?? {};
+      let changed = false;
+      const next = { ...existing };
+
+      for (const q of questions) {
+        if (q.kind !== "scale" || !q.isRequired) continue;
+
+        if (next[q.id]?.valueNumber === undefined) {
+          const min = q.minValue ?? 1;
+          const max = q.maxValue ?? 5;
+          const defaultValue = Math.floor((min + max) / 2);
+
+          next[q.id] = { ...(next[q.id] ?? {}), valueNumber: defaultValue };
+          changed = true;
+        }
+      }
+
+      if (!changed) return prev;
+      return { ...prev, [currentItem.id]: next };
+    });
+  }, [currentItem?.id, currentItem?.kind, currentItem?.questions]);
 
   const setCurrentItemAnswers = (updater: (prev: AnswerState) => AnswerState) => {
+    if (!currentItem) return;
     setAnswersByItemId((prev) => ({
       ...prev,
       [currentItem.id]: updater(prev[currentItem.id] ?? {}),
@@ -78,7 +114,7 @@ export default function CandidateFlowClient({
   };
 
   const handleNext = () => {
-    if (currentIndex < items.length - 1) {
+    if (currentIndex < orderedItems.length - 1) {
       setCurrentIndex((i) => i + 1);
       setError(null);
     }
@@ -96,6 +132,7 @@ export default function CandidateFlowClient({
     setError(null);
 
     if (
+      !currentItem ||
       currentItem.kind !== "test" ||
       !currentItem.questions ||
       !currentItem.submission
@@ -103,10 +140,7 @@ export default function CandidateFlowClient({
       return;
     }
 
-    if (isCurrentSubmitted) {
-      // déjà envoyé → pas de resubmit
-      return;
-    }
+    if (isCurrentSubmitted) return;
 
     const payloadAnswers = currentItem.questions
       .map((q) => {
@@ -139,18 +173,16 @@ export default function CandidateFlowClient({
         }),
       });
 
-      const json = await res.json();
+      const json = await res.json().catch(() => null);
 
-      if (!res.ok || !json.ok) {
-        setError(json.error ?? "Erreur lors de l'envoi de vos réponses.");
+      if (!res.ok || !json?.ok) {
+        setError(json?.error ?? "Erreur lors de l'envoi de vos réponses.");
         return;
       }
 
-      // ✅ on marque CET item comme submitted
       setSubmittedByItemId((prev) => ({ ...prev, [currentItem.id]: true }));
 
-      // ✅ Auto-advance si pas dernier
-      if (!isLast) {
+      if (!isLastItem) {
         setTimeout(() => handleNext(), 500);
       }
     } catch (err) {
@@ -161,7 +193,34 @@ export default function CandidateFlowClient({
     }
   };
 
+  const canGoNext =
+    currentItem?.kind === "video" ||
+    (currentItem?.kind === "test" && isCurrentSubmitted);
+
+  // ✅ Écran de fin global (marche même si dernier item = vidéo)
+  if (flowDone || (isLastItem && canFinish)) {
+    return (
+      <div className="bg-white rounded-2xl shadow p-6 text-center">
+        <h1 className="text-xl font-semibold mb-2">
+          Merci, votre parcours de test a bien été complété ✅
+        </h1>
+        <p className="text-sm text-slate-600">
+          Vos réponses ont été transmises au recruteur. Vous pouvez fermer cette
+          page.
+        </p>
+      </div>
+    );
+  }
+
   const renderCurrentItem = () => {
+    if (!currentItem) {
+      return (
+        <div className="rounded-xl border p-4 text-sm text-red-600">
+          Item courant introuvable.
+        </div>
+      );
+    }
+
     if (currentItem.kind === "video") {
       return (
         <div className="space-y-4">
@@ -171,12 +230,6 @@ export default function CandidateFlowClient({
           )}
           {currentItem.videoUrl && (
             <div className="aspect-video w-full rounded-lg overflow-hidden bg-slate-900">
-             {/* <iframe
-                src={currentItem.videoUrl}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              /> */}
               VIDEO NON DISPONIBLE
             </div>
           )}
@@ -185,25 +238,10 @@ export default function CandidateFlowClient({
     }
 
     if (currentItem.kind === "test" && currentItem.questions && currentItem.submission) {
-      if (isCurrentSubmitted && isLast) {
-        return (
-          <div className="bg-white rounded-2xl shadow p-6 text-center">
-            <h1 className="text-xl font-semibold mb-2">
-              Merci, votre parcours de test a bien été complété ✅
-            </h1>
-            <p className="text-sm text-slate-600">
-              Vos réponses ont été transmises au recruteur. Vous pouvez fermer cette page.
-            </p>
-          </div>
-        );
-      }
-
       return (
         <form onSubmit={handleSubmit} className="space-y-6">
           <header className="space-y-2">
-            <h2 className="text-xl font-semibold">
-              {currentItem.title ?? "Test"}
-            </h2>
+            <h2 className="text-xl font-semibold">{currentItem.title ?? "Test"}</h2>
             {currentItem.description && (
               <p className="text-sm text-slate-600">{currentItem.description}</p>
             )}
@@ -310,12 +348,15 @@ export default function CandidateFlowClient({
       );
     }
 
-    return null;
+    return (
+      <div className="rounded-xl border p-4 text-sm text-red-600">
+        Item invalide: kind={currentItem.kind}. Il manque questions ou submission.
+        <pre className="mt-2 text-xs text-slate-700 overflow-auto">
+          {JSON.stringify(currentItem, null, 2)}
+        </pre>
+      </div>
+    );
   };
-
-  const canGoNext =
-    currentItem.kind === "video" ||
-    (currentItem.kind === "test" && isCurrentSubmitted);
 
   return (
     <div className="bg-white rounded-2xl shadow p-6 space-y-6">
@@ -323,14 +364,14 @@ export default function CandidateFlowClient({
         <h1 className="text-2xl font-semibold">{flow.name}</h1>
         <div className="flex items-center gap-2 text-sm text-slate-600">
           <span>
-            Étape {currentIndex + 1} sur {items.length}
+            Étape {currentIndex + 1} sur {orderedItems.length}
           </span>
         </div>
       </header>
 
       <div className="space-y-2">
         <div className="flex gap-1">
-          {items.map((item, index) => (
+          {orderedItems.map((item, index) => (
             <div
               key={item.id}
               className={`h-2 flex-1 rounded ${
@@ -344,7 +385,7 @@ export default function CandidateFlowClient({
           ))}
         </div>
         <div className="flex justify-between text-xs text-slate-500">
-          {items.map((item, index) => (
+          {orderedItems.map((item, index) => (
             <span
               key={item.id}
               className={index === currentIndex ? "font-medium text-blue-600" : ""}
@@ -367,11 +408,14 @@ export default function CandidateFlowClient({
         </button>
 
         <button
-          onClick={handleNext}
-          disabled={currentIndex === items.length - 1 || !canGoNext}
+          onClick={() => {
+            if (isLastItem) setFlowDone(true);
+            else handleNext();
+          }}
+          disabled={!isLastItem && !canGoNext}
           className="px-4 py-2 rounded-xl border border-slate-900 text-white bg-slate-900 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Suivant →
+          {isLastItem ? "Terminer" : "Suivant →"}
         </button>
       </div>
     </div>

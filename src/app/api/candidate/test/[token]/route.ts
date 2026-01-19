@@ -22,6 +22,8 @@ async function handleGet(_req: NextRequest, { token }: { token: string }) {
   }
 
   const sb = supabaseAdminForPublicRoute();
+  console.log("[candidate POST] service role env present?", Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY));
+
   const testRepo = makeTestRepo(sb);
   const inviteRepo = makeTestInviteRepo(sb);
   const flowRepo = makeTestFlowRepo(sb);
@@ -216,7 +218,7 @@ async function handlePost(req: NextRequest, { token }: { token: string }) {
         INVALID_QUESTION: 400,
         DUPLICATE_QUESTION: 400,
         MISSING_REQUIRED_QUESTION: 400,
-        TEST_NOT_FOUND: 404,
+        TEST_NOT_FOUND: 404,       
       };
 
       const statusCode = statusCodeMap[err.code] ?? 400;
