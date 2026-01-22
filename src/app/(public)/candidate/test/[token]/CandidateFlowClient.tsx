@@ -273,6 +273,15 @@ export default function CandidateFlowClient({
                         key={q.id}
                         className="border border-slate-200 rounded-lg p-4 bg-white space-y-3"
                       >
+                        {q.context?.trim() && (
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap">
+                            <div className="text-xs font-semibold text-slate-500 mb-1">
+                              Contexte
+                            </div>
+                            {q.context}
+                          </div>
+                        )}
+
                         <div className="flex items-start gap-2">
                           <span className="text-sm font-medium text-slate-500">
                             {q.businessCode || "•"}
@@ -305,6 +314,14 @@ export default function CandidateFlowClient({
                   key={q.id}
                   className="border border-slate-200 rounded-xl p-4 space-y-3"
                 >
+                  {q.context?.trim() && (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap">
+                      <div className="text-xs font-semibold text-slate-500 mb-1">
+                        Contexte
+                      </div>
+                      {q.context}
+                    </div>
+                  )}
                   <div className="flex items-start gap-2">
                     <span className="text-sm font-medium text-slate-500">
                       {index + 1}.
@@ -341,8 +358,8 @@ export default function CandidateFlowClient({
             {submitting
               ? "Envoi en cours..."
               : isCurrentSubmitted
-              ? "Réponses envoyées ✓"
-              : "Envoyer mes réponses"}
+                ? "Réponses envoyées ✓"
+                : "Envoyer mes réponses"}
           </button>
         </form>
       );
@@ -374,13 +391,12 @@ export default function CandidateFlowClient({
           {orderedItems.map((item, index) => (
             <div
               key={item.id}
-              className={`h-2 flex-1 rounded ${
-                index < currentIndex
-                  ? "bg-green-500"
-                  : index === currentIndex
+              className={`h-2 flex-1 rounded ${index < currentIndex
+                ? "bg-green-500"
+                : index === currentIndex
                   ? "bg-blue-500"
                   : "bg-slate-200"
-              }`}
+                }`}
             />
           ))}
         </div>

@@ -159,85 +159,93 @@ export default function CandidateTestClient({
       <div className="space-y-6">
         {shouldGroupByDimension(safeQuestions)
           ? groupQuestionsByDimension(safeQuestions).map((dimension) => (
-              <div
-                key={dimension.dimensionCode}
-                className="space-y-4 border border-slate-200 rounded-xl p-5 bg-slate-50"
-              >
-                <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {dimension.dimensionCode}
-                  </h3>
-                  <span className="text-xs text-slate-500">
-                    {dimension.questions.length} question
-                    {dimension.questions.length > 1 ? "s" : ""}
-                  </span>
-                </div>
+            <div
+              key={dimension.dimensionCode}
+              className="space-y-4 border border-slate-200 rounded-xl p-5 bg-slate-50"
+            >
+              <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+                <h3 className="text-lg font-semibold text-slate-900">
+                  {dimension.dimensionCode}
+                </h3>
+                <span className="text-xs text-slate-500">
+                  {dimension.questions.length} question
+                  {dimension.questions.length > 1 ? "s" : ""}
+                </span>
+              </div>
 
-                <div className="space-y-4">
-                  {dimension.questions.map((q) => (
-                    <div
-                      key={q.id}
-                      className="border border-slate-200 rounded-lg p-4 bg-white space-y-3"
-                    >
-                      <div className="flex items-start gap-2">
-                        <span className="text-sm font-medium text-slate-500">
-                          {q.businessCode || "•"}
-                        </span>
-                        <div className="flex-1">
-                          <p className="font-medium">{q.label}</p>
-                          <p className="text-xs text-slate-500 mt-1">
-                            {renderKindLabel(q.kind)}
-                            {q.isRequired && " • Obligatoire"}
-                          </p>
+              <div className="space-y-4">
+                {dimension.questions.map((q) => (
+                  <div
+                    key={q.id}
+                    className="border border-slate-200 rounded-lg p-4 bg-white space-y-3"
+                  >
+                    {q.context?.trim() && (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 whitespace-pre-wrap">
+                        <div className="text-xs font-semibold text-slate-500 mb-1">
+                          Contexte
                         </div>
+                        {q.context}
                       </div>
-
-                      <div className="pl-6">
-                        {renderQuestionInput(q, answers[q.id], {
-                          onTextChange: (value) =>
-                            handleTextChange(q.id, value),
-                          onNumberChange: (value) =>
-                            handleNumberChange(q.id, value),
-                        })}
+                    )}
+                    <div className="flex items-start gap-2">
+                      <span className="text-sm font-medium text-slate-500">
+                        {q.businessCode || "•"}
+                      </span>
+                      <div className="flex-1">
+                        <p className="font-medium">{q.label}</p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {renderKindLabel(q.kind)}
+                          {q.isRequired && " • Obligatoire"}
+                        </p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          : safeQuestions.map((q, index) => (
-              <div
-                key={q.id}
-                className="border border-slate-200 rounded-xl p-4 space-y-3"
-              >
-                <div className="flex items-start gap-2">
-                  <span className="text-sm font-medium text-slate-500">
-                    {index + 1}.
-                  </span>
-                  <div>
-                    <p className="font-medium">
-                      {q.label}
-                      {q.businessCode ? (
-                        <span className="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-700">
-                          {q.businessCode}
-                        </span>
-                      ) : null}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {renderKindLabel(q.kind)}
-                      {q.isRequired && " • Obligatoire"}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="pl-6">
-                  {renderQuestionInput(q, answers[q.id], {
-                    onTextChange: (value) => handleTextChange(q.id, value),
-                    onNumberChange: (value) => handleNumberChange(q.id, value),
-                  })}
+                    <div className="pl-6">
+                      {renderQuestionInput(q, answers[q.id], {
+                        onTextChange: (value) =>
+                          handleTextChange(q.id, value),
+                        onNumberChange: (value) =>
+                          handleNumberChange(q.id, value),
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+          : safeQuestions.map((q, index) => (
+            <div
+              key={q.id}
+              className="border border-slate-200 rounded-xl p-4 space-y-3"
+            >
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-medium text-slate-500">
+                  {index + 1}.
+                </span>
+                <div>
+                  <p className="font-medium">
+                    {q.label}
+                    {q.businessCode ? (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-700">
+                        {q.businessCode}
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {renderKindLabel(q.kind)}
+                    {q.isRequired && " • Obligatoire"}
+                  </p>
                 </div>
               </div>
-            ))}
+
+              <div className="pl-6">
+                {renderQuestionInput(q, answers[q.id], {
+                  onTextChange: (value) => handleTextChange(q.id, value),
+                  onNumberChange: (value) => handleNumberChange(q.id, value),
+                })}
+              </div>
+            </div>
+          ))}
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

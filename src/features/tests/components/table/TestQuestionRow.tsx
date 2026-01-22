@@ -21,16 +21,12 @@ type Props = {
   onDelete: (questionId: string) => Promise<void>;
 };
 
-export function TestQuestionRow({
-  index,
-  question,
-  onUpdate,
-  onDelete,
-}: Props) {
+export function TestQuestionRow({ index, question, onUpdate, onDelete }: Props) {
   const [open, setOpen] = React.useState(false);
 
   // draft local (uniquement pour le panneau)
   const [label, setLabel] = React.useState(question.label);
+  const [context, setContext] = React.useState<string>(question.context ?? "");
   const [kind, setKind] = React.useState<TestQuestion["kind"]>(question.kind);
   const [minValue, setMinValue] = React.useState<string>(
     question.minValue != null ? String(question.minValue) : ""
@@ -42,7 +38,7 @@ export function TestQuestionRow({
     (question.options ?? []).join("\n")
   );
 
-  // ✅ au lieu d'un “isReversed” opaque, on garde la même donnée mais avec une UI explicite
+  // ✅ UI explicite pour scale
   const [isReversed, setIsReversed] = React.useState<boolean>(
     Boolean(question.isReversed)
   );
@@ -53,6 +49,7 @@ export function TestQuestionRow({
 
   React.useEffect(() => {
     setLabel(question.label);
+    setContext(question.context ?? "");
     setKind(question.kind);
     setMinValue(question.minValue != null ? String(question.minValue) : "");
     setMaxValue(question.maxValue != null ? String(question.maxValue) : "");
@@ -62,6 +59,7 @@ export function TestQuestionRow({
   }, [
     question.id,
     question.label,
+    question.context,
     question.kind,
     question.minValue,
     question.maxValue,
@@ -73,13 +71,14 @@ export function TestQuestionRow({
     question.kind === "yes_no"
       ? "Oui / Non"
       : question.kind === "scale"
-        ? "Échelle"
-        : question.kind === "choice"
-          ? "Choix"
-          : "Texte libre";
+      ? "Échelle"
+      : question.kind === "choice"
+      ? "Choix"
+      : "Texte libre";
 
   function resetDraft() {
     setLabel(question.label);
+    setContext(question.context ?? "");
     setKind(question.kind);
     setMinValue(question.minValue != null ? String(question.minValue) : "");
     setMaxValue(question.maxValue != null ? String(question.maxValue) : "");
@@ -96,9 +95,12 @@ export function TestQuestionRow({
       return;
     }
 
+    const normalizedContext = context.trim();
+
     // normalisation patch
     const patch: Partial<TestQuestion> = {
       label: label.trim(),
+      context: normalizedContext ? normalizedContext : null, // ✅
       kind,
       minValue:
         kind === "scale" ? (minValue === "" ? null : Number(minValue)) : null,
@@ -120,9 +122,7 @@ export function TestQuestionRow({
         await onUpdate(question.id, patch);
         setOpen(false);
       } catch (e) {
-        setError(
-          e instanceof Error ? e.message : "Erreur lors de la mise à jour"
-        );
+        setError(e instanceof Error ? e.message : "Erreur lors de la mise à jour");
       }
     });
   }
@@ -132,9 +132,7 @@ export function TestQuestionRow({
       try {
         await onDelete(question.id);
       } catch (e) {
-        setError(
-          e instanceof Error ? e.message : "Erreur lors de la suppression"
-        );
+        setError(e instanceof Error ? e.message : "Erreur lors de la suppression");
       }
     });
   }
@@ -142,18 +140,27 @@ export function TestQuestionRow({
   const isScale = question.kind === "scale";
   const scaleIsReversed = Boolean(question.isReversed);
 
+  const hasContext = Boolean(question.context?.trim());
+  const contextPreview = (question.context ?? "").trim();
+
   return (
     <>
       <div className="flex items-start justify-between gap-2 p-1">
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] text-slate-500">{index + 1}.</span>
 
             <Badge variant="secondary" className="text-[11px]">
               {kindLabel}
             </Badge>
 
-            {/* ✅ VISIBILITÉ DIRECTE : on voit que ça existe sans ouvrir */}
+            {/* ✅ Visibilité directe du contexte */}
+            {hasContext && (
+              <Badge variant="outline" className="text-[11px]">
+                Contexte
+              </Badge>
+            )}
+
             {isScale && (
               <Badge
                 variant={scaleIsReversed ? "destructive" : "outline"}
@@ -170,19 +177,24 @@ export function TestQuestionRow({
             )}
           </div>
 
-          <div className="whitespace-pre-wrap wrap-break-word text-sm font-semibold text-slate-900 truncate">
+          <div className="whitespace-pre-wrap wrap-break-word text-sm font-semibold text-slate-900">
             {question.label}
             <span className="ml-2 text-[10px] text-slate-400">
               Réf. {question.businessCode ?? ""}
             </span>
           </div>
 
+          {/* Optionnel : aperçu 1 ligne du contexte */}
+          {hasContext && (
+            <div className="text-xs text-slate-500 line-clamp-1">
+              Contexte : {contextPreview}
+            </div>
+          )}
+
           {isScale && (
             <div className="text-xs text-slate-500">
               Échelle : {question.minValue ?? 0} → {question.maxValue ?? 10}
-              {scaleIsReversed
-                ? " • Sens négatif (inversée)"
-                : " • Sens positif"}
+              {scaleIsReversed ? " • Sens négatif (inversée)" : " • Sens positif"}
             </div>
           )}
 
@@ -202,11 +214,7 @@ export function TestQuestionRow({
             disabled={pendingSave || pendingDelete}
             aria-label={open ? "Fermer" : "Modifier"}
           >
-            {open ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
+            {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
 
           <Button
@@ -225,6 +233,25 @@ export function TestQuestionRow({
       {/* PANEL (inline) */}
       {open && (
         <div className="border-t border-slate-200 p-3 space-y-3">
+          {/* ✅ Contexte (full width) */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-slate-500">
+                Contexte (affiché avant la question)
+              </p>
+              <span className="text-[11px] text-slate-400">{context.length} caractères</span>
+            </div>
+
+            <textarea
+              rows={3}
+              className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 transition resize-y"
+              value={context}
+              onChange={(e) => setContext(e.target.value)}
+              disabled={pendingSave || pendingDelete}
+              placeholder="Ex : Vous êtes en magasin, il y a 10 clients, un collègue en pause…"
+            />
+          </div>
+
           <div className="grid gap-2 md:grid-cols-[2fr,1fr,1fr,1fr]">
             <Input
               value={label}
@@ -238,7 +265,6 @@ export function TestQuestionRow({
               onValueChange={(v) => {
                 const next = v as TestQuestion["kind"];
                 setKind(next);
-                // ✅ si on sort de scale, on neutralise le reverse
                 if (next !== "scale") setIsReversed(false);
               }}
               disabled={pendingSave || pendingDelete}
@@ -276,12 +302,10 @@ export function TestQuestionRow({
             )}
           </div>
 
-          {/* ✅ UX : “Sens de l’item” (normal/inversé) au lieu d’une checkbox obscure */}
+          {/* ✅ UX : “Sens de l’item” */}
           {kind === "scale" && (
             <div className="rounded-lg border border-slate-200 bg-white/60 p-3 space-y-2">
-              <div className="text-sm font-medium text-slate-900">
-                Sens de l’item
-              </div>
+              <div className="text-sm font-medium text-slate-900">Sens de l’item</div>
 
               <label className="flex items-start gap-2 text-sm text-slate-700">
                 <input
@@ -293,8 +317,7 @@ export function TestQuestionRow({
                   disabled={pendingSave || pendingDelete}
                 />
                 <span>
-                  <span className="font-medium">Normal</span> — Plus je suis
-                  d’accord, plus c’est positif.
+                  <span className="font-medium">Normal</span> — Plus je suis d’accord, plus c’est positif.
                   <span className="block text-[11px] text-slate-500">
                     Exemple : 5 = très bon / 1 = pas bon
                   </span>
@@ -311,8 +334,7 @@ export function TestQuestionRow({
                   disabled={pendingSave || pendingDelete}
                 />
                 <span>
-                  <span className="font-medium">Inversé</span> — Plus je suis
-                  d’accord, plus c’est négatif (score inversé automatiquement).
+                  <span className="font-medium">Inversé</span> — Plus je suis d’accord, plus c’est négatif (score inversé automatiquement).
                   <span className="block text-[11px] text-slate-500">
                     Exemple : 5 = mauvais / 1 = bon
                   </span>
@@ -320,17 +342,14 @@ export function TestQuestionRow({
               </label>
 
               <p className="text-[11px] text-slate-500">
-                Astuce : utilise “Inversé” pour les items formulés négativement
-                (ex: “J’attends qu’on me dise quoi faire.”).
+                Astuce : utilise “Inversé” pour les items formulés négativement (ex: “J’attends qu’on me dise quoi faire.”).
               </p>
             </div>
           )}
 
           {kind === "choice" && (
             <div className="space-y-1">
-              <p className="text-[11px] text-slate-500">
-                Options (1 par ligne)
-              </p>
+              <p className="text-[11px] text-slate-500">Options (1 par ligne)</p>
               <textarea
                 rows={3}
                 className="w-full rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/60 focus:border-primary/60 transition resize-y"

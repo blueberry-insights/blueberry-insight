@@ -55,6 +55,7 @@ export function TestQuestionsEditor({ testId, testOrgId, questions, onDeleteLoca
     fd.set("label", String(patch.label ?? target.label ?? ""));
     fd.set("kind", String(patch.kind ?? target.kind ?? ""));
     fd.set("isReversed", String(patch.isReversed ?? target.isReversed ?? ""));
+    fd.set("context", String(patch.context ?? target.context ?? ""));
 
     const kind = patch.kind ?? target.kind;
 

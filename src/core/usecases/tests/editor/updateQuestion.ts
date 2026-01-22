@@ -12,6 +12,7 @@ const InputSchema = z.object({
   options: z.array(z.string()).optional(),
   isRequired: z.boolean().optional(),
   isReversed: z.boolean().optional().nullable(),
+  context: z.string().optional().nullable(),
 });
 
 export function makeUpdateQuestion(testRepo: TestRepo) {
@@ -31,6 +32,7 @@ export function makeUpdateQuestion(testRepo: TestRepo) {
         input.kind === "choice" ? input.options ?? [] : null,
       isRequired: input.isRequired ?? true,
       isReversed: input.kind === "scale" ? (input.isReversed ?? null) : null,
+      context: input.context?.trim() ? input.context.trim() : null,
     });
   };
 }

@@ -263,10 +263,10 @@ export function makeTestRepo(sb: Db): TestRepo {
         p_test_id: testId,
         p_blueberry_org_id: BLUEBERRY_ORG_ID as string,
       });
-    
+
       if (error) throw error;
       if (!data) return null;
-    
+
       const typed = data as GetTestWithQuestionsResult;
       return {
         test: mapTestRow(typed.test),
@@ -304,43 +304,42 @@ export function makeTestRepo(sb: Db): TestRepo {
 
     async updateQuestion(input: UpdateQuestionInput): Promise<TestQuestion> {
       const patch: TablesUpdate<"test_questions"> = {
-        org_id: input.orgId,
         label: input.label,
         kind: input.kind,
         min_value: input.kind === "scale" ? (input.minValue ?? null) : null,
         max_value: input.kind === "scale" ? (input.maxValue ?? null) : null,
         options:
           input.kind === "choice"
-            ? ((input.options ??
-                null) as TablesUpdate<"test_questions">["options"])
+            ? ((input.options ?? null) as TablesUpdate<"test_questions">["options"])
             : null,
         is_required: input.isRequired ?? true,
-        is_reversed : input.kind === "scale" ? ((input as UpdateQuestionInput & { isReversed?: boolean | null }).isReversed ?? false) : null,
+        is_reversed:
+          input.kind === "scale"
+            ? ((input as UpdateQuestionInput & { isReversed?: boolean | null })
+              .isReversed ?? false)
+            : null,
+        context: (input.context ?? "").trim() || null,
       };
-
       const { data, error } = await sb
-      .from("test_questions")
-      .update(patch)
-      .eq("id", input.questionId)
-      .eq("org_id", input.orgId)
-      .select("*"); // <- PAS de single
-    
-    if (error) {
-      console.error("[TestRepo.updateQuestion] error", error);
-      throw error;
-    }
-    
-    if (!data || data.length === 0) {
-      // 99% : RLS a bloqué OU filtre org/id ne matche pas
-      throw new Error(
-        "Update refusé (0 row). Vérifie RLS sur test_questions (UPDATE) et que org_id/id matchent."
-      );
-    }
-    
-    return mapQuestionRow(data[0]);
-    
+        .from("test_questions")
+        .update(patch)
+        .eq("id", input.questionId)
+        .eq("org_id", input.orgId)
+        .select("*"); // <- PAS de single
 
-    
+      if (error) {
+        console.error("[TestRepo.updateQuestion] error", error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        // 99% : RLS a bloqué OU filtre org/id ne matche pas
+        throw new Error(
+          "Update refusé (0 row). Vérifie RLS sur test_questions (UPDATE) et que org_id/id matchent."
+        );
+      }
+
+      return mapQuestionRow(data[0]);
     },
 
     async updateDimensionTitle({ orgId, dimensionId, title }) {
@@ -465,7 +464,7 @@ export function makeTestRepo(sb: Db): TestRepo {
         maxScore,
         scoringResult,
       } = input;
-    
+
       // 0) Guard : submission existe + pas déjà complétée
       const { data: s, error: sErr } = await sb
         .from("test_submissions")
@@ -473,22 +472,22 @@ export function makeTestRepo(sb: Db): TestRepo {
         .eq("id", submissionId)
         .eq("org_id", orgId)
         .maybeSingle();
-    
+
       if (sErr) throw sErr;
       if (!s) throw new Error("Submission introuvable.");
       if (s.completed_at) throw new Error("Cette submission est déjà complétée.");
-    
+
       const { error: delErr } = await sb
         .from("test_answers")
         .delete()
         .eq("org_id", orgId)
         .eq("submission_id", submissionId);
-    
+
       if (delErr) {
         console.error("[TestRepo.submitAnswers] delete answers error", delErr);
         throw delErr;
       }
-    
+
       // 1) Insert answers
       const rows: TablesInsert<"test_answers">[] = answers.map((a) => ({
         org_id: orgId,
@@ -497,27 +496,27 @@ export function makeTestRepo(sb: Db): TestRepo {
         value_text: a.valueText ?? null,
         value_number: a.valueNumber ?? null,
       }));
-    
+
       const { data: inserted, error: insertError } = await sb
         .from("test_answers")
         .insert(rows)
         .select("*");
-    
+
       if (insertError || !inserted) {
         console.error("[TestRepo.submitAnswers] insert answers error", insertError);
         throw insertError ?? new Error("Failed to insert test answers");
       }
-    
+
       const patch: TablesUpdate<"test_submissions"> = {
         completed_at: new Date().toISOString(),
       };
-    
+
       if (numericScore !== undefined) patch.numeric_score = numericScore;
       if (maxScore !== undefined) patch.max_score = maxScore;
       if (scoringResult !== undefined) {
         patch.scoring_result = scoringResult as MotivationScoringResult;
       }
-    
+
       const { data: updated, error: updErr } = await sb
         .from("test_submissions")
         .update(patch)
@@ -525,13 +524,13 @@ export function makeTestRepo(sb: Db): TestRepo {
         .eq("org_id", orgId)
         .select("*")
         .single();
-    
+
       if (updErr || !updated) {
         console.error("[TestRepo.submitAnswers] update submission error", updErr);
-    
+
         throw updErr ?? new Error("Failed to update submission");
       }
-    
+
       return {
         submission: mapSubmissionRow(updated),
         answers: inserted.map(mapAnswerRow),
@@ -654,7 +653,7 @@ export function makeTestRepo(sb: Db): TestRepo {
 
     async getReviewBySubmissionId(input: { submissionId: string }) {
       const { submissionId } = input;
-    
+
       const { data, error } = await sb
         .from("test_reviews")
         .select("*")
@@ -662,10 +661,10 @@ export function makeTestRepo(sb: Db): TestRepo {
 
         .order("created_at", { ascending: false })
         .maybeSingle();
-    
+
       if (error) throw error;
       if (!data) return null;
-    
+
       return {
         id: data.id,
         submissionId: data.submission_id,
@@ -675,7 +674,7 @@ export function makeTestRepo(sb: Db): TestRepo {
         createdAt: data.created_at,
       };
     },
-    
+
     async getSubmissionQuestionsWithDisplayIndex({
       orgId,
       submissionId,
@@ -814,14 +813,14 @@ export function makeTestRepo(sb: Db): TestRepo {
 
     async countSubmissionsToReview(input: { orgId: string }): Promise<number> {
       const { orgId } = input;
-    
+
       const { count, error } = await sb
         .from("test_submissions")
         .select("id", { count: "exact", head: true })
         .eq("org_id", orgId)
         .not("completed_at", "is", null);
       // plus tard: .is("reviewed_at", null)
-    
+
       if (error) throw error;
       return count ?? 0;
     },
@@ -830,14 +829,14 @@ export function makeTestRepo(sb: Db): TestRepo {
         p_org_id: activeOrgId,
       });
       if (error) throw error;
-    
+
       return (data ?? []).map((r: { id: string; name: string; type: string }) => ({
         id: r.id,
         name: r.name,
         type: r.type as TestType,
       }));
     },
-    
+
     async areAllFlowTestsCompleted({
       orgId,
       candidateId,

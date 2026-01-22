@@ -93,6 +93,9 @@ export async function updateQuestionAction(
       const label = String(formData.get("label") ?? "").trim();
       const kind = String(formData.get("kind") ?? "").trim();
 
+      const contextRaw = formData.get("context");
+      const context = contextRaw == null ? undefined : String(contextRaw);
+
       const isReversedRaw = formData.get("isReversed");
       const isReversed =
         isReversedRaw == null
@@ -111,6 +114,8 @@ export async function updateQuestionAction(
         questionId,
         label,
         kind,
+        context: context?.trim() || undefined,
+
         dimensionCode:
           String(formData.get("dimensionCode") ?? "").trim() || undefined,
         dimensionOrder: formData.get("dimensionOrder")
@@ -146,6 +151,7 @@ export async function updateQuestionAction(
     }
   });
 }
+
 
 export async function deleteQuestionAction(
   formData: FormData
