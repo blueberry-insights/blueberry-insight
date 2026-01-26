@@ -420,12 +420,14 @@ export type Database = {
           description: string | null
           flow_id: string
           id: string
+          is_complete: boolean | null
           is_required: boolean
           kind: string
           order_index: number
           org_id: string
           test_id: string | null
           title: string | null
+          video_asset_id: string | null
           video_url: string | null
         }
         Insert: {
@@ -433,12 +435,14 @@ export type Database = {
           description?: string | null
           flow_id: string
           id?: string
+          is_complete?: boolean | null
           is_required?: boolean
           kind: string
           order_index?: number
           org_id: string
           test_id?: string | null
           title?: string | null
+          video_asset_id?: string | null
           video_url?: string | null
         }
         Update: {
@@ -446,12 +450,14 @@ export type Database = {
           description?: string | null
           flow_id?: string
           id?: string
+          is_complete?: boolean | null
           is_required?: boolean
           kind?: string
           order_index?: number
           org_id?: string
           test_id?: string | null
           title?: string | null
+          video_asset_id?: string | null
           video_url?: string | null
         }
         Relationships: [
@@ -474,6 +480,13 @@ export type Database = {
             columns: ["test_id"]
             isOneToOne: false
             referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_flow_items_video_asset_id_fkey"
+            columns: ["video_asset_id"]
+            isOneToOne: false
+            referencedRelation: "video_assets"
             referencedColumns: ["id"]
           },
         ]
@@ -907,6 +920,64 @@ export type Database = {
           {
             foreignKeyName: "user_organizations_org_id_fkey"
             columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      video_assets: {
+        Row: {
+          created_at: string
+          id: string
+          mime_type: string | null
+          org_id: string
+          size_bytes: number | null
+          storage_path: string
+          target_offer_id: string | null
+          target_org_id: string | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          org_id: string
+          size_bytes?: number | null
+          storage_path: string
+          target_offer_id?: string | null
+          target_org_id?: string | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mime_type?: string | null
+          org_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          target_offer_id?: string | null
+          target_org_id?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_assets_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_assets_target_offer_fk"
+            columns: ["target_offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_assets_target_org_fk"
+            columns: ["target_org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]

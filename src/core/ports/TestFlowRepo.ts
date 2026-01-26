@@ -15,7 +15,7 @@ export type AddFlowItemInput =
       kind: "video";
       title?: string;
       description?: string;
-      videoUrl: string;
+      videoUrl?: string; // Optionnel pour permettre draft
       isRequired?: boolean;
     }
   | {

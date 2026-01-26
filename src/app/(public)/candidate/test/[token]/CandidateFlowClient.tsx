@@ -28,6 +28,11 @@ type AnswerState = Record<
 type AnswersByItemId = Record<string, AnswerState>;
 type SubmittedByItemId = Record<string, boolean>;
 
+type VideoStateByItemId = Record<
+  string,
+  { status: "idle" | "loading" | "ready" | "error"; url?: string; error?: string }
+>;
+
 export default function CandidateFlowClient({
   token,
   flow,
@@ -42,6 +47,10 @@ export default function CandidateFlowClient({
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ✅ signed URL cache (par item)
+  const [videoStateByItemId, setVideoStateByItemId] =
+    useState<VideoStateByItemId>({});
 
   const orderedItems = useMemo(() => {
     return [...items].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
@@ -88,6 +97,65 @@ export default function CandidateFlowClient({
       return { ...prev, [currentItem.id]: next };
     });
   }, [currentItem?.id, currentItem?.kind, currentItem?.questions]);
+
+  // ✅ VIDEO: fetch signed URL si besoin (storage)
+  useEffect(() => {
+    if (!currentItem || currentItem.kind !== "video") return;
+
+    const externalUrl = currentItem.videoUrl;
+    const videoAssetId = currentItem.videoAssetId;
+
+
+    if (externalUrl?.trim()) return;
+
+    if (!videoAssetId) return;
+
+    const st = videoStateByItemId[currentItem.id];
+    if (st?.status === "ready" || st?.status === "loading") return;
+
+    setVideoStateByItemId((prev) => ({
+      ...prev,
+      [currentItem.id]: { status: "loading" },
+    }));
+
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/candidate/test/${token}/video?itemId=${encodeURIComponent(currentItem.id)}`,
+          {
+            method: "GET",
+          }
+        );
+
+        const json = await res.json().catch(() => null);
+
+        if (!res.ok || !json?.ok || !json?.data?.signedUrl) {
+          setVideoStateByItemId((prev) => ({
+            ...prev,
+            [currentItem.id]: {
+              status: "error",
+              error: json?.error ?? "Impossible de charger la vidéo.",
+            },
+          }));
+          return;
+        }
+
+        setVideoStateByItemId((prev) => ({
+          ...prev,
+          [currentItem.id]: { status: "ready", url: json.data.signedUrl },
+        }));
+      } catch (e) {
+        console.error(e);
+        setVideoStateByItemId((prev) => ({
+          ...prev,
+          [currentItem.id]: {
+            status: "error",
+            error: "Erreur réseau. Merci de réessayer.",
+          },
+        }));
+      }
+    })();
+  }, [currentItem?.id, currentItem?.kind, token, videoStateByItemId, currentItem]);
 
   const setCurrentItemAnswers = (updater: (prev: AnswerState) => AnswerState) => {
     if (!currentItem) return;
@@ -197,7 +265,6 @@ export default function CandidateFlowClient({
     currentItem?.kind === "video" ||
     (currentItem?.kind === "test" && isCurrentSubmitted);
 
-  // ✅ Écran de fin global (marche même si dernier item = vidéo)
   if (flowDone || (isLastItem && canFinish)) {
     return (
       <div className="bg-white rounded-2xl shadow p-6 text-center">
@@ -205,8 +272,7 @@ export default function CandidateFlowClient({
           Merci, votre parcours de test a bien été complété ✅
         </h1>
         <p className="text-sm text-slate-600">
-          Vos réponses ont été transmises au recruteur. Vous pouvez fermer cette
-          page.
+          Vos réponses ont été transmises au recruteur. Vous pouvez fermer cette page.
         </p>
       </div>
     );
@@ -222,16 +288,62 @@ export default function CandidateFlowClient({
     }
 
     if (currentItem.kind === "video") {
+      const externalUrl = currentItem.videoUrl;
+
+      const st = videoStateByItemId[currentItem.id];
+      const signedUrl = st?.status === "ready" ? st.url : undefined;
+
       return (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">{currentItem.title || "Vidéo"}</h2>
           {currentItem.description && (
             <p className="text-sm text-slate-600">{currentItem.description}</p>
           )}
-          {currentItem.videoUrl && (
+
+          {/* 1) URL externe */}
+          {externalUrl?.trim() ? (
             <div className="aspect-video w-full rounded-lg overflow-hidden bg-slate-900">
-              VIDEO NON DISPONIBLE
+              {/* Si c’est youtube/vimeo tu peux préférer iframe; sinon <video> */}
+              <video
+                className="h-full w-full"
+                controls
+                playsInline
+                src={externalUrl}
+              />
             </div>
+          ) : (
+            <>
+              {/* 2) Storage signed URL */}
+              {st?.status === "loading" && (
+                <div className="aspect-video w-full rounded-lg overflow-hidden bg-slate-100 flex items-center justify-center text-sm text-slate-600">
+                  Chargement de la vidéo...
+                </div>
+              )}
+
+              {st?.status === "error" && (
+                <div className="rounded-xl border p-4 text-sm text-red-600">
+                  {st.error ?? "Impossible de charger la vidéo."}
+                </div>
+              )}
+
+              {signedUrl && (
+                <div className="aspect-video w-full rounded-lg overflow-hidden bg-slate-900">
+                  <video
+                    className="h-full w-full"
+                    controls
+                    playsInline
+                    src={signedUrl}
+                  />
+                </div>
+              )}
+
+              {/* 3) Rien */}
+              {!st && (
+                <div className="rounded-xl border p-4 text-sm text-slate-600">
+                  Cette étape vidéo n’est pas disponible pour le moment.
+                </div>
+              )}
+            </>
           )}
         </div>
       );
@@ -368,9 +480,6 @@ export default function CandidateFlowClient({
     return (
       <div className="rounded-xl border p-4 text-sm text-red-600">
         Item invalide: kind={currentItem.kind}. Il manque questions ou submission.
-        <pre className="mt-2 text-xs text-slate-700 overflow-auto">
-          {JSON.stringify(currentItem, null, 2)}
-        </pre>
       </div>
     );
   };
@@ -391,12 +500,13 @@ export default function CandidateFlowClient({
           {orderedItems.map((item, index) => (
             <div
               key={item.id}
-              className={`h-2 flex-1 rounded ${index < currentIndex
-                ? "bg-green-500"
-                : index === currentIndex
-                  ? "bg-blue-500"
-                  : "bg-slate-200"
-                }`}
+              className={`h-2 flex-1 rounded ${
+                index < currentIndex
+                  ? "bg-green-500"
+                  : index === currentIndex
+                    ? "bg-blue-500"
+                    : "bg-slate-200"
+              }`}
             />
           ))}
         </div>

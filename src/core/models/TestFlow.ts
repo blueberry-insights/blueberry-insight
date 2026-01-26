@@ -22,6 +22,7 @@ export type TestFlowItem = {
   testId?: string;
   testName?: string;
   videoUrl?: string;
+  videoAssetId?: string;
   title?: string | null;
   description?: string | null;
   isRequired?: boolean | null;

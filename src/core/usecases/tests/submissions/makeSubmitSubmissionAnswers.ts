@@ -1,10 +1,10 @@
-// core/usecases/makeSubmitSubmissionAnswers.ts
+
 import type { TestRepo } from "@/core/ports/TestRepo";
 import type { TestInviteRepo } from "@/core/ports/TestInviteRepo";
 import type { CandidateRepo } from "@/core/ports/CandidateRepo";
 import type { TestFlowRepo } from "@/core/ports/TestFlowRepo";
 
-// ✅ v2.5 : UN SEUL moteur
+
 import { computeMotivationScoring } from "@/core/usecases/tests/scoring/computeMotivationScoring";
 import { MotivationScoringResult } from "@/core/models/Test";
 
@@ -67,9 +67,6 @@ export function makeSubmitSubmissionAnswers(deps: {
       throw new SubmitSubmissionError("NO_ANSWERS", "Aucune réponse envoyée.");
     }
 
-    // ============================================================================
-    // VALIDATIONS DE SÉCURITÉ (si inviteToken fourni)
-    // ============================================================================
     let invite = null;
     if (inviteToken) {
       invite = await inviteRepo.getByToken(inviteToken);
@@ -135,7 +132,6 @@ export function makeSubmitSubmissionAnswers(deps: {
       }
     }
 
-    // 5) Validation spécifique FLOW
     let flowData: Awaited<ReturnType<TestFlowRepo["getFlowByOffer"]>> | null =
       null;
 
@@ -190,7 +186,7 @@ export function makeSubmitSubmissionAnswers(deps: {
       }
     }
 
-    // Validation : pas de doublons
+
     const unique = new Set<string>();
     for (const a of answers) {
       if (unique.has(a.questionId)) {
@@ -231,7 +227,6 @@ export function makeSubmitSubmissionAnswers(deps: {
 
     const { test, questions } = testWithQuestions;
 
-    // 8) Protection "déjà complété"
     if (submission.completedAt) {
       throw new SubmitSubmissionError(
         "SUBMISSION_ALREADY_COMPLETED",
@@ -239,7 +234,6 @@ export function makeSubmitSubmissionAnswers(deps: {
       );
     }
 
-    // 9) Scoring uniquement pour les tests de motivations (v2.5)
     let numericScore: number | undefined;
     let maxScore: number | undefined;
     let scoringResult: MotivationScoringResult | null | undefined;
@@ -251,7 +245,6 @@ export function makeSubmitSubmissionAnswers(deps: {
         answers,
       });
 
-      // ✅ DB attend un INTEGER → on force ici
       numericScore =
         scoring.numericScore == null
           ? undefined
@@ -269,17 +262,74 @@ export function makeSubmitSubmissionAnswers(deps: {
       answers,
       numericScore,
       maxScore,
-      scoringResult, // ✅ nouveau champ (jsonb) sur submission
+      scoringResult, 
     });
 
-    // 11) Marquer l'invitation comme complétée (si fournie)
     if (invite) {
       if (!isFlowMode) {
-        await inviteRepo.markCompleted({ inviteId: invite.id });
+        try {
+          await inviteRepo.markCompleted({ inviteId: invite.id });
+          if (submission.candidateId) {
+            try {
+              await candidateRepo.updateCandidateStatus({
+                orgId,
+                candidateId: submission.candidateId,
+                status: "screening",
+              });
+            } catch (error) {
+              console.error(
+                "[submitSubmissionAnswers] Failed to update candidate status (test seul):",
+                error
+              );
+              // On continue même si la mise à jour du statut échoue
+              // L'invite est déjà marquée comme complétée, donc le test ne sera plus accessible
+            }
+          }
+        } catch (error) {
+          console.error(
+            "[submitSubmissionAnswers] Failed to mark invite as completed (test seul):",
+            error
+          );
+        }
       } else {
-        const testItemIds = flowData!.items
+        // Flow : vérifier si tous les tests sont complétés
+        if (!flowData) {
+          console.error(
+            "[submitSubmissionAnswers] Flow data is null in flow mode",
+            { inviteId: invite.id, submissionId }
+          );
+          // On ne peut pas vérifier la complétion sans flowData
+          return result;
+        }
+
+        const testItemIds = flowData.items
           .filter((it) => it.kind === "test")
           .map((it) => it.id);
+
+        // Si aucun test dans le flow (seulement vidéos), on considère le flow comme complété
+        // après cette soumission (qui ne devrait pas arriver car on est dans un flow avec test)
+        if (testItemIds.length === 0) {
+          console.warn(
+            "[submitSubmissionAnswers] Flow has no test items, marking as completed",
+            { inviteId: invite.id, flowId: flowData.flow.id }
+          );
+          await inviteRepo.markCompleted({ inviteId: invite.id });
+          if (submission.candidateId) {
+            try {
+              await candidateRepo.updateCandidateStatus({
+                orgId,
+                candidateId: submission.candidateId,
+                status: "screening",
+              });
+            } catch (error) {
+              console.error(
+                "[submitSubmissionAnswers] Failed to update candidate status (flow sans tests):",
+                error
+              );
+            }
+          }
+          return result;
+        }
 
         const isFlowCompleted = await testRepo.areAllFlowTestsCompleted({
           orgId,
@@ -288,18 +338,32 @@ export function makeSubmitSubmissionAnswers(deps: {
         });
 
         if (isFlowCompleted) {
-          await inviteRepo.markCompleted({ inviteId: invite.id });
+          // Flow complété : marquer invite comme complétée + mettre à jour statut candidat
+          try {
+            await inviteRepo.markCompleted({ inviteId: invite.id });
+            if (submission.candidateId) {
+              try {
+                await candidateRepo.updateCandidateStatus({
+                  orgId,
+                  candidateId: submission.candidateId,
+                  status: "screening",
+                });
+              } catch (error) {
+                console.error(
+                  "[submitSubmissionAnswers] Failed to update candidate status (flow complété):",
+                  error
+                );
+                // On continue même si la mise à jour du statut échoue
+              }
+            }
+          } catch (error) {
+            console.error(
+              "[submitSubmissionAnswers] Failed to mark invite as completed (flow complété):",
+              error
+            );
+          }
         }
       }
-    }
-
-    // 12) Mettre à jour le statut du candidat
-    if (submission.candidateId) {
-      await candidateRepo.updateCandidateStatus({
-        orgId,
-        candidateId: submission.candidateId,
-        status: "screening",
-      });
     }
 
     return result;

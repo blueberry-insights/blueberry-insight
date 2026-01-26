@@ -64,6 +64,7 @@ export function makeTestFlowRepo(supabase: Db): TestFlowRepo {
           orgId: item.org_id,
           testId: item.test_id ?? undefined,
           videoUrl: item.video_url ?? undefined,
+          videoAssetId: item.video_asset_id ?? undefined,
           title: item.title ?? undefined,
           description: (item as Record<string, unknown>).description as string | undefined,
           isRequired: item.is_required ?? undefined,
@@ -147,7 +148,7 @@ export function makeTestFlowRepo(supabase: Db): TestFlowRepo {
 
       const payload =
         input.kind === "video"
-          ? { ...base, video_url: input.videoUrl, test_id: null }
+          ? { ...base, video_url: input.videoUrl ?? null, test_id: null }
           : { ...base, test_id: input.testId, video_url: null };
 
       const { data, error } = await supabase
@@ -166,6 +167,7 @@ export function makeTestFlowRepo(supabase: Db): TestFlowRepo {
         kind: mapFlowItemKind(data.kind),
         testId: data.test_id ?? undefined,
         videoUrl: data.video_url ?? undefined,
+        videoAssetId: data.video_asset_id ?? undefined,
         title: data.title ?? undefined,
         description: (data as Record<string, unknown>).description as string | undefined,
         isRequired: data.is_required ?? undefined,
