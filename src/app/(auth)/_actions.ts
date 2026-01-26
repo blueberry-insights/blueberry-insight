@@ -14,6 +14,7 @@ import { makeLoginUser } from "@/core/usecases/auth/loginUser";
 import { makeRegisterUser } from "@/core/usecases/auth/registerUser";
 import { makeSendPasswordResetEmail } from "@/core/usecases/auth/sendPasswordResetEmail";
 import { makeUpdatePassword } from "@/core/usecases/auth/updatePassword";
+import { logger } from "@/shared/utils/logger";
 
 import { makeOrgRepo } from "@/infra/supabase/adapters/org.repo.supabase";
 import { makeMembershipRepo } from "@/infra/supabase/adapters/membership.repo.supabase";
@@ -135,7 +136,7 @@ export async function resetPasswordAction(
 
   const rawAppUrl = env.NEXT_PUBLIC_APP_URL;
   if (!rawAppUrl) {
-    console.error("[resetPasswordAction] NEXT_PUBLIC_APP_URL is not set");
+    logger.error("[resetPasswordAction] NEXT_PUBLIC_APP_URL is not set");
     return { ok: false, error: "Configuration invalide" };
   }
 
@@ -149,7 +150,7 @@ export async function resetPasswordAction(
   });
 
   if (!result.ok && result.error) {
-    console.error("[resetPasswordAction] sendResetEmail error:", result.error);
+      logger.error("[resetPasswordAction] sendResetEmail error", undefined, result.error);
   }
 
   return { ok: true };

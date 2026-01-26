@@ -14,6 +14,7 @@ import { ZodError } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ActionResult } from "../types/actionResult";
 import { actionSuccess, actionError } from "../types/actionResult";
+import { logActionError } from "../utils/logger";
 
 type AuthContext = {
   sb: SupabaseClient;
@@ -177,8 +178,11 @@ export function createActionHandler<
           return actionError(issue?.message ?? "Données invalides") as ActionResult<TTransformedOutput>;
         }
 
-        // Log l'erreur pour le debugging
-        console.error(`[${actionName}] error:`, err);
+        // Log l'erreur de manière sécurisée
+        logActionError(actionName, err, {
+          userId: ctx.userId,
+          orgId: ctx.orgId,
+        });
         return actionError(errorMessage) as ActionResult<TTransformedOutput>;
       }
     });

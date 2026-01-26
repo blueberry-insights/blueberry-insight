@@ -2,6 +2,7 @@ import type { AuthService } from "@/core/ports/AuthService";
 import type { OrgRepo } from "@/core/ports/OrgRepo";
 import type { MembershipRepo } from "@/core/ports/MembershipRepo";
 import type { Slugger } from "@/core/ports/Slugger";
+import { logger } from "@/shared/utils/logger";
 
 export type RegisterInput = {
   email: string;
@@ -74,10 +75,11 @@ export const makeRegisterUser = (
 
       if (userId) {
         try {
-          console.log(`[registerUser] Rollback: deleting user ${userId} due to error:`, message);
+          // ✅ Log sécurisé : userId sera automatiquement masqué (UUID)
+          logger.warn("[registerUser] Rollback: deleting user due to error", { userId, errorMessage: message });
           await deps.auth.deleteUser(userId);
         } catch (rollbackError) {
-          console.error("[registerUser] Rollback failed - user may be orphaned:", rollbackError);
+          logger.error("[registerUser] Rollback failed - user may be orphaned", { userId }, rollbackError);
         }
       }
 

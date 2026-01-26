@@ -3,6 +3,7 @@ import crypto from "crypto";
 import type { TestInviteRepo } from "@/core/ports/TestInviteRepo";
 import type { TestInvite } from "@/core/models/Test";
 import type { CandidateRepo } from "@/core/ports/CandidateRepo";
+import { logger } from "@/shared/utils/logger";
 
 export function makeSendTestInviteForCandidate(deps: {
   inviteRepo: TestInviteRepo;
@@ -67,7 +68,8 @@ export function makeSendTestInviteForCandidate(deps: {
       }
       // Si les flowItemId ne correspondent pas, on continue pour créer une nouvelle invitation
     }
-    console.log("[sendTestInviteForCandidate] Création d'une nouvelle invitation avec flowItemId:", flowItemId);
+      // ✅ Log sécurisé : flowItemId sera automatiquement masqué (UUID)
+      logger.debug("[sendTestInviteForCandidate] Création d'une nouvelle invitation", { flowItemId });
     const invite = await inviteRepo.createInvite({
       orgId,
       candidateId,
@@ -76,7 +78,8 @@ export function makeSendTestInviteForCandidate(deps: {
       expiresAt,
       token, 
     });
-    console.log("[sendTestInviteForCandidate] Invitation créée, flowItemId:", invite.flowItemId);
+      // ✅ Log sécurisé : flowItemId sera automatiquement masqué (UUID)
+      logger.debug("[sendTestInviteForCandidate] Invitation créée", { flowItemId: invite.flowItemId });
 
     // Mettre à jour le statut du candidat à "test" après la création de l'invitation
     const candidate = await candidateRepo.getById(orgId, candidateId);

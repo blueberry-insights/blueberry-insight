@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { makeAuthServiceForAction } from "@/infra/supabase/composition";
+import { logger } from "@/shared/utils/logger";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -12,16 +13,17 @@ export async function GET(req: Request) {
   const errorCode = url.searchParams.get("error_code");
   const errorDescription = url.searchParams.get("error_description");
 
-  console.log("[auth/callback] params:", {
+  // ✅ Log sécurisé : email est automatiquement masqué
+  logger.debug("[auth/callback] params", {
     hasCode: !!code,
     type,
     flow,
-    email,
+    email, // ← Sera automatiquement masqué par sanitizeValue
     error,
     errorCode,
     errorDescription,
     pathname: url.pathname,
-    fullUrl: url.toString(),
+    // fullUrl peut contenir des tokens → on ne le log pas
   });
 
   if (error) {
@@ -41,13 +43,14 @@ export async function GET(req: Request) {
       redirectPath = "/auth/verify";
     }
 
-    console.error("[auth/callback] Supabase error:", {
+    // ✅ Log sécurisé : email sera automatiquement masqué
+    logger.error("[auth/callback] Supabase error", {
       error,
       errorCode,
       errorDescription,
       flow,
       type,
-      email,
+      email, // ← Sera automatiquement masqué par sanitizeValue
     });
 
     const redirectUrl = new URL(redirectPath, url);
@@ -67,7 +70,7 @@ export async function GET(req: Request) {
     try {
       await auth.exchangeCodeForSession(code);
     } catch (e) {
-      console.error("[auth/callback] exchangeCodeForSession failed:", e);
+      logger.error("[auth/callback] exchangeCodeForSession failed", undefined, e);
 
       const userId = await auth.currentUserId();
       if (!userId) {
@@ -82,7 +85,7 @@ export async function GET(req: Request) {
   const userId = await auth.currentUserId();
 
   if (!userId) {
-    console.error("[auth/callback] No session found");
+    logger.error("[auth/callback] No session found");
     const redirectUrl = new URL("/login", url);
     redirectUrl.searchParams.set(
       "error",
@@ -91,7 +94,8 @@ export async function GET(req: Request) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  console.log("[auth/callback] Session active, userId:", userId);
+  // ✅ Log sécurisé : userId sera automatiquement masqué (UUID)
+  logger.debug("[auth/callback] Session active", { userId });
 
   if (type === "recovery" || flow === "reset") {
     return NextResponse.redirect(new URL("/auth/reset/confirm", url));

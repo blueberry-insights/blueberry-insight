@@ -4,6 +4,7 @@
  */
 import { supabaseAdmin } from "../client";
 import type { UserInfoRepo, UserInfo } from "@/core/ports/UserInfoRepo";
+import { logger } from "@/shared/utils/logger";
 
 export function makeUserInfoRepo(): UserInfoRepo {
   return {
@@ -22,7 +23,7 @@ export function makeUserInfoRepo(): UserInfoRepo {
           fullName: (userData.user.user_metadata?.full_name as string | undefined) ?? null,
         };
       } catch (err) {
-        console.warn(`[UserInfoRepo.getUserById] Unable to fetch user ${userId}:`, err);
+        logger.warn("[UserInfoRepo.getUserById] Unable to fetch user", { userId }, err);
         return null;
       }
     },

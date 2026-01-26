@@ -6,6 +6,7 @@ import type {
   LinkSubmissionToInviteInput,
   MarkInviteCompletedInput,
 } from "@/core/ports/TestInviteRepo";
+import { logger } from "@/shared/utils/logger";
 
 import type { TestInvite } from "@/core/models/Test";
 
@@ -48,7 +49,7 @@ export function makeTestInviteRepo(sb: Db): TestInviteRepo {
         .single();
 
       if (error || !data) {
-        console.error("[TestInviteRepo.createInvite] error", error);
+        logger.error("[TestInviteRepo.createInvite] error", undefined, error);
         throw error ?? new Error("Failed to create test invite");
       }
 
@@ -63,12 +64,13 @@ export function makeTestInviteRepo(sb: Db): TestInviteRepo {
         .maybeSingle();
 
       if (error) {
-        console.error("[TestInviteRepo.getByToken] error", error);
+        logger.error("[TestInviteRepo.getByToken] error", undefined, error);
         throw error;
       }
       if (!data) return null;
       const invite = mapInviteRow(data);
-      console.log("[TestInviteRepo.getByToken] invite récupérée, flowItemId:", invite.flowItemId);
+      // ✅ Log sécurisé : flowItemId sera automatiquement masqué (UUID)
+      logger.debug("[TestInviteRepo.getByToken] invite récupérée", { flowItemId: invite.flowItemId });
       return invite;
     },
 
@@ -83,7 +85,7 @@ export function makeTestInviteRepo(sb: Db): TestInviteRepo {
         .eq("id", input.inviteId);
 
       if (error) {
-        console.error("[TestInviteRepo.linkSubmission] error", error);
+        logger.error("[TestInviteRepo.linkSubmission] error", undefined, error);
         throw error;
       }
     },
@@ -100,7 +102,7 @@ export function makeTestInviteRepo(sb: Db): TestInviteRepo {
         .eq("id", input.inviteId);
 
       if (error) {
-        console.error("[TestInviteRepo.markCompleted] error", error);
+        logger.error("[TestInviteRepo.markCompleted] error", undefined, error);
         throw error;
       }
     },

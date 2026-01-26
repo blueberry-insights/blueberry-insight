@@ -14,6 +14,7 @@ import {
   getStringOrUndefined,
   getNumber,
 } from "@/shared/utils/formData";
+import { logActionError } from "@/shared/utils/logger";
 
 import { supabaseAdmin } from "@/infra/supabase/client";
 
@@ -25,8 +26,8 @@ export async function createFlowForOfferAction(
   formData: FormData
 ): Promise<Ok<{ id: string }> | Err> {
   return withAuth(async (ctx) => {
+    const offerId = getStringTrimmed(formData, "offerId");
     try {
-      const offerId = getStringTrimmed(formData, "offerId");
       if (!offerId) {
         return { ok: false, error: "offerId manquant" };
       }
@@ -47,7 +48,7 @@ export async function createFlowForOfferAction(
       revalidatePath(`/offers/${offerId}/tests`);
       return { ok: true, data: { id: flow.id } };
     } catch (e) {
-      console.error("[createFlowForOfferAction]", e);
+      logActionError("createFlowForOfferAction", e, { offerId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur lors de la création du parcours" };
     }
   });
@@ -61,9 +62,9 @@ export async function addFlowVideoItemAction(
   formData: FormData
 ): Promise<AddFlowItemOk | Err> {
   return withAuth(async (ctx) => {
+    const offerId = getStringTrimmed(formData, "offerId");
+    const flowId = getStringTrimmed(formData, "flowId");
     try {
-      const offerId = getStringTrimmed(formData, "offerId");
-      const flowId = getStringTrimmed(formData, "flowId");
       const title = getStringOrUndefined(formData, "title");
       const description = getStringOrUndefined(formData, "description");
 
@@ -94,7 +95,7 @@ export async function addFlowVideoItemAction(
       revalidatePath(`/offers/${offerId}/tests`);
       return { ok: true, data: created };
     } catch (e) {
-      console.error("[addFlowVideoItemAction]", e);
+      logActionError("addFlowVideoItemAction", e, { offerId, flowId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur lors de l'ajout du bloc vidéo" };
     }
   });
@@ -104,10 +105,10 @@ export async function addFlowTestItemAction(
   formData: FormData
 ): Promise<AddFlowItemOk | Err> {
   return withAuth(async (ctx) => {
+    const offerId = getStringTrimmed(formData, "offerId");
+    const flowId = getStringTrimmed(formData, "flowId");
+    const testId = getStringTrimmed(formData, "testId");
     try {
-      const offerId = getStringTrimmed(formData, "offerId");
-      const flowId = getStringTrimmed(formData, "flowId");
-      const testId = getStringTrimmed(formData, "testId");
       const title = getStringOrUndefined(formData, "title");
       const description = getStringOrUndefined(formData, "description");
       const orderIndex = getNumber(formData, "orderIndex") || 1;
@@ -134,7 +135,7 @@ export async function addFlowTestItemAction(
       revalidatePath(`/offers/${offerId}/tests`);
       return { ok: true, data: created };
     } catch (e) {
-      console.error("[addFlowTestItemAction]", e);
+      logActionError("addFlowTestItemAction", e, { offerId, flowId, testId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur lors de l'ajout du bloc test" };
     }
   });
@@ -161,6 +162,11 @@ export async function requestFlowVideoUploadAction(
   formData: FormData
 ): Promise<Ok<{ bucket: string; path: string; token: string }> | Err> {
   return withAuth(async (ctx) => {
+    const offerId = getStringTrimmed(formData, "offerId");
+    const itemId = getStringTrimmed(formData, "itemId");
+    const fileName = getStringTrimmed(formData, "fileName");
+    const mimeType = getStringTrimmed(formData, "mimeType");
+    const sizeBytes = getNumber(formData, "sizeBytes");
     try {
       // ⚠️ SECURITY: Guard Blueberry only (catalogue centralisé)
       // Les vidéos sont stockées dans l'org Blueberry, donc seuls les admins Blueberry
@@ -169,12 +175,6 @@ export async function requestFlowVideoUploadAction(
       if (ctx.orgId !== blueberryOrgId && !isBlueberryAdmin({ orgId: ctx.orgId, role: ctx.role })) {
         return { ok: false, error: "Unauthorized" };
       }
-
-      const offerId = getStringTrimmed(formData, "offerId");
-      const itemId = getStringTrimmed(formData, "itemId");
-      const fileName = getStringTrimmed(formData, "fileName");
-      const mimeType = getStringTrimmed(formData, "mimeType");
-      const sizeBytes = getNumber(formData, "sizeBytes");
 
       if (!offerId || !itemId) {
         return { ok: false, error: "Champs manquants (offerId, itemId)" };
@@ -200,7 +200,11 @@ export async function requestFlowVideoUploadAction(
         .single();
 
       if (checkErr || !check) {
-        console.error("[requestFlowVideoUploadAction] check error", checkErr);
+        logActionError("requestFlowVideoUploadAction", checkErr, {
+          offerId,
+          itemId,
+          orgId: ctx.orgId,
+        });
         return {
           ok: false,
           error: "Bloc introuvable ou pas lié à cette offre",
@@ -216,7 +220,12 @@ export async function requestFlowVideoUploadAction(
         .createSignedUploadUrl(path);
 
       if (error || !data) {
-        console.error("[requestFlowVideoUploadAction] signed upload error", error);
+        logActionError("requestFlowVideoUploadAction", error, {
+          offerId,
+          itemId,
+          fileName,
+          orgId: ctx.orgId,
+        });
         return { ok: false, error: "Impossible de générer l’URL d’upload" };
       }
 
@@ -230,7 +239,7 @@ export async function requestFlowVideoUploadAction(
         },
       };
     } catch (e) {
-      console.error("[requestFlowVideoUploadAction]", e);
+      logActionError("requestFlowVideoUploadAction", e, { offerId, itemId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur serveur (signed upload)" };
     }
   });
@@ -251,6 +260,12 @@ export async function attachUploadedVideoToFlowItemAction(
   formData: FormData
 ): Promise<AddFlowItemOk | Err> {
   return withAuth(async (ctx) => {
+    const offerId = getStringTrimmed(formData, "offerId");
+    const itemId = getStringTrimmed(formData, "itemId");
+    const storagePath = getStringTrimmed(formData, "storagePath");
+    const mimeType = getStringTrimmed(formData, "mimeType");
+    const sizeBytes = getNumber(formData, "sizeBytes");
+    const title = getStringOrNull(formData, "title");
     try {
       // ⚠️ SECURITY: Guard Blueberry only (catalogue centralisé)
       // Les vidéos sont stockées dans l'org Blueberry, donc seuls les admins Blueberry
@@ -259,13 +274,6 @@ export async function attachUploadedVideoToFlowItemAction(
       if (ctx.orgId !== blueberryOrgId && !isBlueberryAdmin({ orgId: ctx.orgId, role: ctx.role })) {
         return { ok: false, error: "Unauthorized" };
       }
-
-      const offerId = getStringTrimmed(formData, "offerId");
-      const itemId = getStringTrimmed(formData, "itemId");
-      const storagePath = getStringTrimmed(formData, "storagePath");
-      const mimeType = getStringTrimmed(formData, "mimeType");
-      const sizeBytes = getNumber(formData, "sizeBytes");
-      const title = getStringOrNull(formData, "title");
 
       if (!offerId || !itemId) {
         return { ok: false, error: "Champs manquants (offerId, itemId)" };
@@ -291,7 +299,11 @@ export async function attachUploadedVideoToFlowItemAction(
         .single();
 
       if (checkErr || !check) {
-        console.error("[attachUploadedVideoToFlowItemAction] check error", checkErr);
+        logActionError("attachUploadedVideoToFlowItemAction", checkErr, {
+          offerId,
+          itemId,
+          orgId: ctx.orgId,
+        });
         return {
           ok: false,
           error: "Bloc introuvable ou pas lié à cette offre",
@@ -312,7 +324,12 @@ export async function attachUploadedVideoToFlowItemAction(
         .single();
 
       if (assetErr || !asset) {
-        console.error("[attachUploadedVideoToFlowItemAction] insert asset error", assetErr);
+        logActionError("attachUploadedVideoToFlowItemAction", assetErr, {
+          offerId,
+          itemId,
+          storagePath,
+          orgId: ctx.orgId,
+        });
         return { ok: false, error: "Impossible d’enregistrer la vidéo (DB)" };
       }
 
@@ -328,14 +345,19 @@ export async function attachUploadedVideoToFlowItemAction(
         .single();
 
       if (updErr || !updatedItem) {
-        console.error("[attachUploadedVideoToFlowItemAction] update item error", updErr);
+        logActionError("attachUploadedVideoToFlowItemAction", updErr, {
+          offerId,
+          itemId,
+          assetId: asset.id,
+          orgId: ctx.orgId,
+        });
         return { ok: false, error: "Impossible d’attacher la vidéo au bloc" };
       }
 
       revalidatePath(`/offers/${offerId}/tests`);
       return { ok: true, data: updatedItem as unknown as TestFlowItem };
     } catch (e) {
-      console.error("[attachUploadedVideoToFlowItemAction]", e);
+      logActionError("attachUploadedVideoToFlowItemAction", e, { offerId, itemId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur serveur (attach vidéo)" };
     }
   });
@@ -345,9 +367,9 @@ export async function deleteFlowItemAction(
   formData: FormData
 ): Promise<DeleteOk | Err> {
   return withAuth(async (ctx) => {
+    const offerId = getStringTrimmed(formData, "offerId");
+    const itemId = getStringTrimmed(formData, "itemId");
     try {
-      const offerId = getStringTrimmed(formData, "offerId");
-      const itemId = getStringTrimmed(formData, "itemId");
 
       if (!offerId || !itemId) {
         return {
@@ -362,7 +384,7 @@ export async function deleteFlowItemAction(
       revalidatePath(`/offers/${offerId}/tests`);
       return { ok: true, data: null };
     } catch (e) {
-      console.error("[deleteFlowItemAction]", e);
+      logActionError("deleteFlowItemAction", e, { offerId, itemId, orgId: ctx.orgId });
       return {
         ok: false,
         error: "Erreur lors de la suppression du bloc",

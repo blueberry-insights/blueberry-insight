@@ -14,6 +14,7 @@ import {
   getNumberOrNull,
   getBoolean,
 } from "@/shared/utils/formData";
+import { logActionError } from "@/shared/utils/logger";
 
 type Err = { ok: false; error: string };
 type Ok<T> = { ok: true; data: T };
@@ -27,8 +28,8 @@ export async function createQuestionAction(
   formData: FormData
 ): Promise<Ok<unknown> | Err> {
   return withAuth(async (ctx) => {
+    const testId = getStringTrimmed(formData, "testId");
     try {
-      const testId = getStringTrimmed(formData, "testId");
       const label = getStringTrimmed(formData, "label");
       const kind = getStringTrimmed(formData, "kind");
       const dimensionCode = getStringTrimmed(formData, "dimensionCode");
@@ -77,7 +78,7 @@ export async function createQuestionAction(
       revalidatePath(`/tests/${testId}`);
       return { ok: true, data: created };
     } catch (e) {
-      console.error("[createQuestionAction]", e);
+      logActionError("createQuestionAction", e, { testId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur lors de la création de la question" };
     }
   });
@@ -87,9 +88,9 @@ export async function updateQuestionAction(
   formData: FormData
 ): Promise<Ok<null> | Err> {
   return withAuth(async (ctx) => {
+    const testId = getStringTrimmed(formData, "testId");
+    const questionId = getStringTrimmed(formData, "questionId");
     try {
-      const testId = getStringTrimmed(formData, "testId");
-      const questionId = getStringTrimmed(formData, "questionId");
       const label = getStringTrimmed(formData, "label");
       const kind = getStringTrimmed(formData, "kind");
       const context = getStringOrUndefined(formData, "context");
@@ -136,7 +137,7 @@ export async function updateQuestionAction(
       revalidatePath(`/tests/${testId}`);
       return { ok: true, data: null };
     } catch (e) {
-      console.error("[updateQuestionAction]", e);
+      logActionError("updateQuestionAction", e, { testId, questionId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur lors de la mise à jour de la question" };
     }
   });
@@ -147,9 +148,9 @@ export async function deleteQuestionAction(
   formData: FormData
 ): Promise<Ok<null> | Err> {
   return withAuth(async (ctx) => {
+    const testId = getStringTrimmed(formData, "testId");
+    const questionId = getStringTrimmed(formData, "questionId");
     try {
-      const testId = getStringTrimmed(formData, "testId");
-      const questionId = getStringTrimmed(formData, "questionId");
 
       if (!testId || !questionId) {
         return { ok: false, error: "testId et questionId sont obligatoires" };
@@ -161,7 +162,7 @@ export async function deleteQuestionAction(
       revalidatePath(`/tests/${testId}`);
       return { ok: true, data: null };
     } catch (e) {
-      console.error("[deleteQuestionAction]", e);
+      logActionError("deleteQuestionAction", e, { testId, questionId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur lors de la suppression de la question" };
     }
   });
@@ -169,9 +170,9 @@ export async function deleteQuestionAction(
 
 export async function reorderQuestionsAction(formData: FormData) {
   return withAuth(async (ctx) => {
+    const testId = getStringTrimmed(formData, "testId");
+    const orderRaw = getStringTrimmed(formData, "order");
     try {
-      const testId = getStringTrimmed(formData, "testId");
-      const orderRaw = getStringTrimmed(formData, "order");
       if (!testId || !orderRaw) return { ok: false, error: "Champs manquants" };
 
       const order = JSON.parse(orderRaw) as { questionId: string; orderIndex: number }[];
@@ -184,7 +185,7 @@ export async function reorderQuestionsAction(formData: FormData) {
       revalidatePath(`/tests/${testId}`);
       return { ok: true, data: null };
     } catch (e) {
-      console.error("[reorderQuestionsAction]", e);
+      logActionError("reorderQuestionsAction", e, { testId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur lors du reorder" };
     }
   });
@@ -193,9 +194,9 @@ export async function reorderQuestionsAction(formData: FormData) {
 // Dimensions: pareil, c'est dans l'orga du test (Blueberry), pas "target org"
 export async function createDimensionAction(formData: FormData) {
   return withAuth(async (ctx) => {
+    const testId = getStringTrimmed(formData, "testId");
+    const title = getStringTrimmed(formData, "title");
     try {
-      const testId = getStringTrimmed(formData, "testId");
-      const title = getStringTrimmed(formData, "title");
       if (!testId || !title) {
         return { ok: false, error: "testId et title sont obligatoires" };
       }
@@ -217,7 +218,7 @@ export async function createDimensionAction(formData: FormData) {
       revalidatePath(`/tests/${testId}`);
       return { ok: true, data: created };
     } catch (e) {
-      console.error("[createDimensionAction]", e);
+      logActionError("createDimensionAction", e, { testId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur lors de la création de la thématique" };
     }
   });
@@ -227,10 +228,10 @@ export async function updateDimensionTitleAction(
   formData: FormData
 ): Promise<Ok<null> | Err> {
   return withAuth(async (ctx) => {
+    const testId = getStringTrimmed(formData, "testId");
+    const dimensionId = getStringTrimmed(formData, "dimensionId");
+    const title = getStringTrimmed(formData, "title");
     try {
-      const testId = getStringTrimmed(formData, "testId");
-      const dimensionId = getStringTrimmed(formData, "dimensionId");
-      const title = getStringTrimmed(formData, "title");
 
       if (!testId || !dimensionId || !title) {
         return { ok: false, error: "testId, dimensionId et title sont obligatoires" };
@@ -242,7 +243,7 @@ export async function updateDimensionTitleAction(
       revalidatePath(`/tests/${testId}`);
       return { ok: true, data: null };
     } catch (e) {
-      console.error("[updateDimensionTitleAction]", e);
+      logActionError("updateDimensionTitleAction", e, { testId, dimensionId, orgId: ctx.orgId });
       return { ok: false, error: "Erreur lors du renommage de la dimension" };
     }
   });

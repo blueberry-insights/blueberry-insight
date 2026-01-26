@@ -2,6 +2,7 @@
 
 import { supabaseServerAction } from "@/infra/supabase/client";
 import { env } from "@/config/env";
+import { logger } from "@/shared/utils/logger";
 import { getStringTrimmed } from "@/shared/utils/formData";
 
 export async function resendSignupEmail(formData: FormData) {
@@ -23,7 +24,7 @@ export async function resendSignupEmail(formData: FormData) {
       options: emailRedirectTo ? { emailRedirectTo } : undefined,
     });
   } catch (err: unknown) {
-    console.error("Resend signup email error:", err);
+    logger.error("Resend signup email error", undefined, err);
   }
 }
 
