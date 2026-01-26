@@ -2,9 +2,10 @@
 
 import { supabaseServerAction } from "@/infra/supabase/client";
 import { env } from "@/config/env";
+import { getStringTrimmed } from "@/shared/utils/formData";
 
 export async function resendSignupEmail(formData: FormData) {
-  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const email = getStringTrimmed(formData, "email").toLowerCase();
   if (!email) return;
 
   const sb = await supabaseServerAction();

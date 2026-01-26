@@ -18,6 +18,8 @@ import { makeUpdatePassword } from "@/core/usecases/auth/updatePassword";
 import { makeOrgRepo } from "@/infra/supabase/adapters/org.repo.supabase";
 import { makeMembershipRepo } from "@/infra/supabase/adapters/membership.repo.supabase";
 import { DefaultSlugger } from "@/infra/supabase/utils/slugger";
+import { getString} from "@/shared/utils/formData";
+
 
 type ResetState = { ok: boolean; error?: string };
 type UpdateState = { ok: boolean; error?: string };
@@ -27,8 +29,8 @@ export async function loginAction(formData: FormData) {
   const safeRedirect = sanitizeRedirect(formData.get("redirectTo"));
 
   const payload = {
-    email: String(formData.get("email") || ""),
-    password: String(formData.get("password") || ""),
+    email: getString(formData, "email"),
+    password: getString(formData, "password"),
   };
   const parsed = LoginSchema.safeParse(payload);
   if (!parsed.success) {
@@ -64,11 +66,11 @@ export async function registerAction(formData: FormData) {
   const auth = await makeAuthServiceForAction();
 
   const payload = {
-    fullName: String(formData.get("fullName") || ""),
-    orgName: String(formData.get("orgName") || ""),
-    email: String(formData.get("email") || ""),
-    password: String(formData.get("password") || ""),
-    confirmPassword: String(formData.get("confirmPassword") || ""),
+    fullName: getString(formData, "fullName"),
+    orgName: getString(formData, "orgName"),
+    email: getString(formData, "email"),
+    password: getString(formData, "password"),
+    confirmPassword: getString(formData, "confirmPassword"),
   };
 
   const parsed = RegisterSchema.safeParse(payload);

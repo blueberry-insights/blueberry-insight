@@ -8,6 +8,12 @@ import {
   makeCreateQuestion,
   makeUpdateQuestion,
 } from "@/core/usecases/tests";
+import {
+  getStringTrimmed,
+  getStringOrUndefined,
+  getNumberOrNull,
+  getBoolean,
+} from "@/shared/utils/formData";
 
 type Err = { ok: false; error: string };
 type Ok<T> = { ok: true; data: T };
@@ -22,15 +28,14 @@ export async function createQuestionAction(
 ): Promise<Ok<unknown> | Err> {
   return withAuth(async (ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
-      const label = String(formData.get("label") ?? "").trim();
-      const kind = String(formData.get("kind") ?? "").trim();
-      const dimensionCode = String(formData.get("dimensionCode") ?? "").trim();
-      const dimensionOrder = formData.get("dimensionOrder")
-        ? Number(formData.get("dimensionOrder"))
-        : undefined;
-
-      const context = String(formData.get("context") ?? "").trim() || undefined;
+      const testId = getStringTrimmed(formData, "testId");
+      const label = getStringTrimmed(formData, "label");
+      const kind = getStringTrimmed(formData, "kind");
+      const dimensionCode = getStringTrimmed(formData, "dimensionCode");
+      const dimensionOrder = getNumberOrNull(formData, "dimensionOrder") ?? undefined;
+      const context = getStringOrUndefined(formData, "context");
+      
+      // isReversed: accepte "true", "1", ou true
       const isReversedRaw = formData.get("isReversed");
       const isReversed =
         isReversedRaw == null
@@ -44,26 +49,21 @@ export async function createQuestionAction(
         };
       }
   
+      // Options: split par \n, trim, filter
+      const optionsRaw = getStringTrimmed(formData, "options");
+      const options = optionsRaw
+        ? optionsRaw.split("\n").map((s) => s.trim()).filter(Boolean)
+        : undefined;
+
       const raw = {
         orgId: ctx.orgId,
         testId,
         label,
         kind,
-        minValue: formData.get("minValue")
-          ? Number(formData.get("minValue"))
-          : undefined,
-        maxValue: formData.get("maxValue")
-          ? Number(formData.get("maxValue"))
-          : undefined,
-        options: (() => {
-          const rawOptions = String(formData.get("options") ?? "").trim();
-          if (!rawOptions) return undefined;
-          return rawOptions
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean);
-        })(),
-        isRequired: String(formData.get("isRequired") ?? "true") === "true",
+        minValue: getNumberOrNull(formData, "minValue") ?? undefined,
+        maxValue: getNumberOrNull(formData, "maxValue") ?? undefined,
+        options,
+        isRequired: getBoolean(formData, "isRequired") || true, // default true
         dimensionCode: dimensionCode || undefined,
         dimensionOrder: dimensionOrder || undefined,
         isReversed,
@@ -88,14 +88,13 @@ export async function updateQuestionAction(
 ): Promise<Ok<null> | Err> {
   return withAuth(async (ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
-      const questionId = String(formData.get("questionId") ?? "").trim();
-      const label = String(formData.get("label") ?? "").trim();
-      const kind = String(formData.get("kind") ?? "").trim();
+      const testId = getStringTrimmed(formData, "testId");
+      const questionId = getStringTrimmed(formData, "questionId");
+      const label = getStringTrimmed(formData, "label");
+      const kind = getStringTrimmed(formData, "kind");
+      const context = getStringOrUndefined(formData, "context");
 
-      const contextRaw = formData.get("context");
-      const context = contextRaw == null ? undefined : String(contextRaw);
-
+      // isReversed: accepte "true", "1", ou true
       const isReversedRaw = formData.get("isReversed");
       const isReversed =
         isReversedRaw == null
@@ -109,33 +108,24 @@ export async function updateQuestionAction(
         };
       }
 
+      // Options: split par \n, trim, filter
+      const optionsRaw = getStringTrimmed(formData, "options");
+      const options = optionsRaw
+        ? optionsRaw.split("\n").map((s) => s.trim()).filter(Boolean)
+        : undefined;
+
       const raw = {
         orgId: ctx.orgId,
         questionId,
         label,
         kind,
-        context: context?.trim() || undefined,
-
-        dimensionCode:
-          String(formData.get("dimensionCode") ?? "").trim() || undefined,
-        dimensionOrder: formData.get("dimensionOrder")
-          ? Number(formData.get("dimensionOrder"))
-          : undefined,
-        minValue: formData.get("minValue")
-          ? Number(formData.get("minValue"))
-          : undefined,
-        maxValue: formData.get("maxValue")
-          ? Number(formData.get("maxValue"))
-          : undefined,
-        options: (() => {
-          const rawOptions = String(formData.get("options") ?? "").trim();
-          if (!rawOptions) return undefined;
-          return rawOptions
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean);
-        })(),
-        isRequired: String(formData.get("isRequired") ?? "true") === "true",
+        context: context || undefined,
+        dimensionCode: getStringTrimmed(formData, "dimensionCode") || undefined,
+        dimensionOrder: getNumberOrNull(formData, "dimensionOrder") ?? undefined,
+        minValue: getNumberOrNull(formData, "minValue") ?? undefined,
+        maxValue: getNumberOrNull(formData, "maxValue") ?? undefined,
+        options,
+        isRequired: getBoolean(formData, "isRequired") || true, // default true
         isReversed,
       };
 
@@ -158,8 +148,8 @@ export async function deleteQuestionAction(
 ): Promise<Ok<null> | Err> {
   return withAuth(async (ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
-      const questionId = String(formData.get("questionId") ?? "").trim();
+      const testId = getStringTrimmed(formData, "testId");
+      const questionId = getStringTrimmed(formData, "questionId");
 
       if (!testId || !questionId) {
         return { ok: false, error: "testId et questionId sont obligatoires" };
@@ -180,8 +170,8 @@ export async function deleteQuestionAction(
 export async function reorderQuestionsAction(formData: FormData) {
   return withAuth(async (ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
-      const orderRaw = String(formData.get("order") ?? "").trim();
+      const testId = getStringTrimmed(formData, "testId");
+      const orderRaw = getStringTrimmed(formData, "order");
       if (!testId || !orderRaw) return { ok: false, error: "Champs manquants" };
 
       const order = JSON.parse(orderRaw) as { questionId: string; orderIndex: number }[];
@@ -204,8 +194,8 @@ export async function reorderQuestionsAction(formData: FormData) {
 export async function createDimensionAction(formData: FormData) {
   return withAuth(async (ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
-      const title = String(formData.get("title") ?? "").trim();
+      const testId = getStringTrimmed(formData, "testId");
+      const title = getStringTrimmed(formData, "title");
       if (!testId || !title) {
         return { ok: false, error: "testId et title sont obligatoires" };
       }
@@ -238,9 +228,9 @@ export async function updateDimensionTitleAction(
 ): Promise<Ok<null> | Err> {
   return withAuth(async (ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
-      const dimensionId = String(formData.get("dimensionId") ?? "").trim();
-      const title = String(formData.get("title") ?? "").trim();
+      const testId = getStringTrimmed(formData, "testId");
+      const dimensionId = getStringTrimmed(formData, "dimensionId");
+      const title = getStringTrimmed(formData, "title");
 
       if (!testId || !dimensionId || !title) {
         return { ok: false, error: "testId, dimensionId et title sont obligatoires" };

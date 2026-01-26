@@ -15,6 +15,8 @@ import {
   validateCvFile,
   getFileValidationErrorMessage,
 } from "@/shared/validation/fileValidation";
+import { getStringTrimmed, getStringOrNull, getString, getNumber } from "@/shared/utils/formData";
+
 type SendInviteOk = {
   ok: true;
   invite: TestInvite;
@@ -36,7 +38,7 @@ export async function uploadCandidateCvAction(
 ): Promise<UploadCvResult> {
   return withAuth(async (ctx) => {
     const file = formData.get("cv") as File | null;
-    const candidateId = String(formData.get("candidateId") || "").trim();
+    const candidateId = getStringTrimmed(formData, "candidateId");
 
     if (!file || !candidateId) {
       return { ok: false, error: "Fichier ou candidat manquant" };
@@ -106,8 +108,8 @@ export async function updateCandidateAction(
   formData: FormData
 ): Promise<Ok | Err> {
   return withAuth(async (ctx): Promise<Ok | Err> => {
-    const candidateId = String(formData.get("id") ?? "");
-    const offerIdRaw = formData.get("offerId");
+    const candidateId = getStringTrimmed(formData, "id");
+    const offerIdRaw = getStringOrNull(formData, "offerId");
     const offerId =
       offerIdRaw === "none" || offerIdRaw === ""
         ? null
@@ -153,15 +155,15 @@ export async function sendCandidateTestInviteAction(
   formData: FormData
 ): Promise<SendInviteOk | SendInviteErr> {
   return withAuth(async (ctx): Promise<SendInviteOk | SendInviteErr> => {
-    const candidateId = String(formData.get("candidateId") || "").trim();
-    const testId = String(formData.get("testId") || "").trim();
-    const expiresInDaysRaw = String(formData.get("expiresInDays") || "3");
+    const candidateId =  getStringTrimmed(formData, "candidateId");
+    const testId = getStringTrimmed(formData, "testId");
+    const expiresInDaysRaw = getString(formData, "expiresInDays");
 
     if (!candidateId || !testId) {
       return { ok: false, error: "Candidat ou test manquant." };
     }
 
-    const expiresInDays = Number(expiresInDaysRaw || "3");
+    const expiresInDays = getNumber(formData, "expiresInDays") || 3 ;
     const expiresInHours = expiresInDays * 24;
 
     const { sb, orgId } = ctx;

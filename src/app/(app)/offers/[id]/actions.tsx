@@ -2,13 +2,14 @@
 import { makeUpdateOffer } from "@/core/usecases/offers/updateOffer";
 import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
 import { withAuth } from "@/infra/supabase/session";
+import { getStringTrimmed } from "@/shared/utils/formData";
 
 
 export async function updateOfferDetailsAction(formData: FormData) {
 return withAuth(async (ctx) => {
 
-  const offerId = String(formData.get("id") ?? "");
-  const status = String(formData.get("status") ?? "").trim() || null;
+  const offerId = getStringTrimmed(formData, "id");
+  const status = getStringTrimmed(formData, "status") || null;
   const repo = makeOfferRepo(ctx.sb);
   const currentOffer = await repo.getById(ctx.orgId, offerId);
   if (!currentOffer) {
@@ -42,6 +43,4 @@ return withAuth(async (ctx) => {
   } catch {
     return { ok: false, error: "Erreur lors de la mise à jour de l'offre" };
   }
-
-
 })}

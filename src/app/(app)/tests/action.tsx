@@ -16,6 +16,7 @@ import { env } from "@/config/env";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/infra/supabase/types/Database";
 import type { ArchiveTestInput } from "@/core/usecases/tests/editor/archiveTest";
+import { getStringArray, getStringOrNull, getStringTrimmed } from "@/shared/utils/formData";
 
 type Ok<T> = { ok: true; data: T };
 type Err = { ok: false; error: string };
@@ -37,7 +38,7 @@ function uniqIds(ids: string[]): string[] {
 }
 
 function normalizeTargetOrgIds(formData: FormData): string[] {
-  return uniqIds(formData.getAll("targetOrgIds").map(String));
+  return uniqIds(getStringArray(formData, "targetOrgIds"));
 }
 
 /**
@@ -174,12 +175,11 @@ export async function createTestAction(
 ): Promise<Ok<unknown> | Err> {
   return withAuth(async (ctx: Ctx) => {
     try {
-      const name = String(formData.get("name") ?? "").trim();
-      const type = String(formData.get("type") ?? "").trim();
-      const description =
-        String(formData.get("description") ?? "").trim() || null;
+      const name = getStringTrimmed(formData, "name");
+      const type = getStringTrimmed(formData, "type");
+      const description = getStringOrNull(formData, "description");
 
-      const exposure = String(formData.get("exposure") ?? "global").trim();
+      const exposure = getStringTrimmed(formData, "exposure");
       const targetOrgIds = normalizeTargetOrgIds(formData);
 
       if (!name || !type) {
@@ -221,12 +221,11 @@ export async function updateTestAction(
 ): Promise<Ok<unknown> | Err> {
   return withAuth(async (ctx: Ctx) => {
     try {
-      const testId = String(formData.get("id") ?? "").trim();
-      const name = String(formData.get("name") ?? "").trim();
-      const description =
-        String(formData.get("description") ?? "").trim() || null;
+      const testId = getStringTrimmed(formData, "id");
+      const name = getStringTrimmed(formData, "name");
+      const description = getStringOrNull(formData, "description");
 
-      const exposure = String(formData.get("exposure") ?? "global").trim();
+      const exposure = getStringTrimmed(formData, "exposure");
       const targetOrgIds = normalizeTargetOrgIds(formData);
 
       if (!testId || !name) {
@@ -272,7 +271,7 @@ export async function duplicateTestAction(
 ): Promise<Ok<unknown> | Err> {
   return withAuth(async (ctx: Ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
+      const testId = getStringTrimmed(formData, "testId");
       if (!testId) return { ok: false, error: "testId obligatoire" };
 
       const repo = makeTestRepo(ctx.sb);
@@ -310,7 +309,7 @@ export async function deleteTestAction(
 ): Promise<Ok<null> | Err> {
   return withAuth(async (ctx: Ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
+      const testId = getStringTrimmed(formData, "testId");
       if (!testId) return { ok: false, error: "testId obligatoire" };
 
       const testRepo = makeTestRepo(ctx.sb);
@@ -342,7 +341,7 @@ export async function getTestTargetsAction(
 ): Promise<Ok<string[]> | Err> {
   return withAuth(async (ctx: Ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
+      const testId = getStringTrimmed(formData, "testId");
       if (!testId) return { ok: false, error: "testId obligatoire" };
 
       // Pas blueberry_admin => on ne leak rien
@@ -372,7 +371,7 @@ export async function archiveTestAction(
 ): Promise<ArchiveOk | ArchiveErr> {
   return withAuth(async (ctx: Ctx) => {
     try {
-      const testId = String(formData.get("testId") ?? "").trim();
+      const testId = getStringTrimmed(formData, "testId");
       if (!ctx.orgId) return { ok: false, error: "Organisation introuvable" };
       if (!testId) return { ok: false, error: "Test introuvable" };
 
