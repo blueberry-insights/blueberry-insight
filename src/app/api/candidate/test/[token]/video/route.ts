@@ -3,13 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdminForPublicRoute } from "@/infra/supabase/client";
 import { makeTestInviteRepo } from "@/infra/supabase/adapters/testInvite.repo.supabase";
 import { makeCandidateRepo } from "@/infra/supabase/adapters/candidate.repo.supabase";
+import { STORAGE } from "@/config/constants";
 
 type Ok = { ok: true; data: { signedUrl: string } };
 type Err = { ok: false; error: string };
-
-const SIGNED_URL_TTL = 60 * 5; // 5 minutes (lecture vidéo)
-
-const BUCKET_BLUEBERRY_VIDEOS = "blueberry-videos";
 
 export async function GET(
   req: NextRequest,
@@ -112,9 +109,10 @@ export async function GET(
       video_assets: VideoAssetRow | VideoAssetRow[] | null;
     };
     
-    const videoAsset = Array.isArray((itemData as ItemDataWithRelations).video_assets)
-      ? (itemData as ItemDataWithRelations).video_assets[0]
-      : (itemData as ItemDataWithRelations).video_assets;
+    const videoAssetsData = (itemData as ItemDataWithRelations).video_assets;
+    const videoAsset = Array.isArray(videoAssetsData)
+      ? videoAssetsData[0] ?? null
+      : videoAssetsData;
 
     if (!videoAsset?.storage_path) {
       return NextResponse.json<Err>(
@@ -140,8 +138,8 @@ export async function GET(
 
     // 7) Générer la signed URL de lecture
     const { data: signed, error: signedErr } = await admin.storage
-      .from(BUCKET_BLUEBERRY_VIDEOS)
-      .createSignedUrl(videoAsset.storage_path, SIGNED_URL_TTL);
+      .from(STORAGE.VIDEO_BUCKET)
+      .createSignedUrl(videoAsset.storage_path, STORAGE.SIGNED_URL_READ_TTL_SECONDS);
 
     if (signedErr || !signed?.signedUrl) {
       console.error("[GET /api/candidate/test/[token]/video] signed URL error", signedErr);

@@ -3,7 +3,7 @@ import type { TestRepo } from "@/core/ports/TestRepo";
 import type { TestInviteRepo } from "@/core/ports/TestInviteRepo";
 import type { CandidateRepo } from "@/core/ports/CandidateRepo";
 import type { TestFlowRepo } from "@/core/ports/TestFlowRepo";
-
+import { VALIDATION } from "@/config/constants";
 
 import { computeMotivationScoring } from "@/core/usecases/tests/scoring/computeMotivationScoring";
 import { MotivationScoringResult } from "@/core/models/Test";
@@ -53,12 +53,12 @@ export function makeSubmitSubmissionAnswers(deps: {
   }) {
     const { orgId, submissionId, answers, inviteToken } = input;
 
-    if (answers.length > 200) {
+    if (answers.length > VALIDATION.MAX_ANSWERS) {
       throw new SubmitSubmissionError("NO_ANSWERS", "Trop de réponses envoyées.");
     }
     
     for (const a of answers) {
-      if (a.valueText && a.valueText.length > 4000) {
+      if (a.valueText && a.valueText.length > VALIDATION.MAX_ANSWER_LENGTH) {
         throw new SubmitSubmissionError("NO_ANSWERS", "Réponse trop longue.");
       }
     }

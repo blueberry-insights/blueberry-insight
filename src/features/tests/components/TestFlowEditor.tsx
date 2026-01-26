@@ -28,6 +28,7 @@ import {
   requestFlowVideoUploadAction,
   attachUploadedVideoToFlowItemAction,
 } from "@/app/(app)/offers/[id]/tests/actions";
+import { STORAGE } from "@/config/constants";
 
 import { Trash2, Video, ClipboardList, Loader2, Upload } from "lucide-react";
 
@@ -39,8 +40,6 @@ type Props = {
 };
 
 type AddMode = "video" | "test";
-
-const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // 200MB
 
 function getSupabaseBrowserClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -199,7 +198,7 @@ export function TestFlowEditor({ offerId, flow, items, tests }: Props) {
       });
       return;
     }
-    if (file.size > MAX_VIDEO_BYTES) {
+    if (file.size > STORAGE.MAX_VIDEO_SIZE_BYTES) {
       toast.error({
         title: "Vidéo trop lourde",
         description: "200MB max.",

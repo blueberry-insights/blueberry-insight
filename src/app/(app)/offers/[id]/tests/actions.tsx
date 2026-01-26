@@ -6,6 +6,8 @@ import { withAuth } from "@/infra/supabase/session";
 import { makeTestFlowRepo } from "@/infra/supabase/adapters/testFlow.repo.supabase";
 import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
 import type { TestFlowItem } from "@/core/models/TestFlow";
+import { isBlueberryAdmin } from "@/shared/utils/roles";
+import { STORAGE } from "@/config/constants";
 
 import { supabaseAdmin } from "@/infra/supabase/client";
 
@@ -135,8 +137,6 @@ export async function addFlowTestItemAction(
   });
 }
 
-const BUCKET_BLUEBERRY_VIDEOS = "blueberry-videos";
-const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // 200MB
 
 function getBlueberryOrgId(): string {
   const blueberryOrgId = process.env.BLUEBERRY_ORG_ID;
@@ -159,8 +159,13 @@ export async function requestFlowVideoUploadAction(
 ): Promise<Ok<{ bucket: string; path: string; token: string }> | Err> {
   return withAuth(async (ctx) => {
     try {
-      // (optionnel) : si tu veux verrouiller à Blueberry only
-      // if (ctx.orgId !== getBlueberryOrgId()) return { ok: false, error: "Unauthorized" };
+      // ⚠️ SECURITY: Guard Blueberry only (catalogue centralisé)
+      // Les vidéos sont stockées dans l'org Blueberry, donc seuls les admins Blueberry
+      // peuvent uploader des vidéos dans le catalogue.
+      const blueberryOrgId = getBlueberryOrgId();
+      if (ctx.orgId !== blueberryOrgId && !isBlueberryAdmin({ orgId: ctx.orgId, role: ctx.role })) {
+        return { ok: false, error: "Unauthorized" };
+      }
 
       const offerId = String(formData.get("offerId") ?? "").trim();
       const itemId = String(formData.get("itemId") ?? "").trim();
@@ -177,7 +182,7 @@ export async function requestFlowVideoUploadAction(
       if (!mimeType.startsWith("video/")) {
         return { ok: false, error: "Le fichier doit être une vidéo (video/*)" };
       }
-      if (sizeBytes > MAX_VIDEO_BYTES) {
+      if (sizeBytes > STORAGE.MAX_VIDEO_SIZE_BYTES) {
         return { ok: false, error: "Vidéo trop lourde (200MB max)" };
       }
 
@@ -204,7 +209,7 @@ export async function requestFlowVideoUploadAction(
       const path = `videos/${crypto.randomUUID()}.${safeExt}`;
 
       const { data, error } = await admin.storage
-        .from(BUCKET_BLUEBERRY_VIDEOS)
+        .from(STORAGE.VIDEO_BUCKET)
         .createSignedUploadUrl(path);
 
       if (error || !data) {
@@ -216,7 +221,7 @@ export async function requestFlowVideoUploadAction(
       return {
         ok: true,
         data: {
-          bucket: BUCKET_BLUEBERRY_VIDEOS,
+          bucket: STORAGE.VIDEO_BUCKET,
           path: data.path,
           token: data.token,
         },
@@ -244,8 +249,13 @@ export async function attachUploadedVideoToFlowItemAction(
 ): Promise<AddFlowItemOk | Err> {
   return withAuth(async (ctx) => {
     try {
-      // (optionnel) : si tu veux verrouiller à Blueberry only
-      if (ctx.orgId !== getBlueberryOrgId()) return { ok: false, error: "Unauthorized" };
+      // ⚠️ SECURITY: Guard Blueberry only (catalogue centralisé)
+      // Les vidéos sont stockées dans l'org Blueberry, donc seuls les admins Blueberry
+      // peuvent uploader des vidéos dans le catalogue.
+      const blueberryOrgId = getBlueberryOrgId();
+      if (ctx.orgId !== blueberryOrgId && !isBlueberryAdmin({ orgId: ctx.orgId, role: ctx.role })) {
+        return { ok: false, error: "Unauthorized" };
+      }
 
       const offerId = String(formData.get("offerId") ?? "").trim();
       const itemId = String(formData.get("itemId") ?? "").trim();
@@ -263,12 +273,11 @@ export async function attachUploadedVideoToFlowItemAction(
       if (!mimeType.startsWith("video/")) {
         return { ok: false, error: "mimeType invalide" };
       }
-      if (!sizeBytes || sizeBytes > MAX_VIDEO_BYTES) {
+      if (!sizeBytes || sizeBytes > STORAGE.MAX_VIDEO_SIZE_BYTES) {
         return { ok: false, error: "sizeBytes invalide" };
       }
 
       const admin = supabaseAdmin();
-      const blueberryOrgId = getBlueberryOrgId();
 
       // ✅ Vérifie item ↔ offer (idem)
       const { data: check, error: checkErr } = await admin

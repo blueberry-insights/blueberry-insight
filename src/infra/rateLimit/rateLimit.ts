@@ -8,14 +8,11 @@
  * - 5 requêtes par minute par IP pour POST
  */
 
+import { RATE_LIMIT } from "@/config/constants";
+
 // Store en mémoire (sera perdu au redémarrage)
 // En production, utiliser Redis ou Upstash
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
-
-const RATE_LIMITS = {
-  GET: { max: 10, windowMs: 60 * 1000 }, // 10 req/min
-  POST: { max: 5, windowMs: 60 * 1000 }, // 5 req/min
-} as const;
 
 export function getClientIp(req: Request): string {
   // Vérifier les headers proxy (Vercel, Cloudflare, etc.)
@@ -36,7 +33,7 @@ export function getClientIp(req: Request): string {
 
 export function isRateLimited(ip: string, method: "GET" | "POST"): boolean {
   const now = Date.now();
-  const limit = RATE_LIMITS[method];
+  const limit = RATE_LIMIT[method];
   const key = `${ip}:${method}`;
   
   const record = requestCounts.get(key);
@@ -63,7 +60,7 @@ export function isRateLimited(ip: string, method: "GET" | "POST"): boolean {
 }
 
 export function createRateLimitResponse(method: "GET" | "POST") {
-  const limit = RATE_LIMITS[method];
+  const limit = RATE_LIMIT[method];
   return new Response(
     JSON.stringify({
       ok: false,
