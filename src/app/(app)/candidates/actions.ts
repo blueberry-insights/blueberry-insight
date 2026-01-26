@@ -9,6 +9,13 @@ import { makeUpdateCandidate, type UpdateInput } from "@/core/usecases/candidate
 import { makeArchiveCandidate, type ArchiveCandidateInput } from "@/core/usecases/candidates/archiveCandidate";
 import { createActionHandler } from "@/shared/utils/actionHandler";
 import type { CandidateRepo } from "@/core/ports/CandidateRepo";
+import {
+  getString,
+  getStringTrimmed,
+  getStringOrNull,
+  getStringArray,
+  getTypedOrUndefined,
+} from "@/shared/utils/formData";
 
 type Ok = { ok: true; candidate: CandidateListItem };
 type Err = { ok: false; error: string };
@@ -25,29 +32,18 @@ export const createCandidateAction = createActionHandler<
 >({
   actionName: "createCandidateAction",
   errorMessage: "Erreur lors de la création du candidat",
-  mapInput: (formData, ctx) => {
-    const tagsRaw = String(formData.get("tags") ?? "").trim();
-    const tagsArray =
-      tagsRaw.length > 0
-        ? tagsRaw
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
-        : [];
-
-    return {
-      orgId: ctx.orgId,
-      fullName: String(formData.get("fullName") ?? ""),
-      email: String(formData.get("email") ?? ""),
-      location: formData.get("location") ? String(formData.get("location")) : null,
-      phone: formData.get("phone") ? String(formData.get("phone")) : null,
-      status: formData.get("status") ? (formData.get("status") as CandidateStatus) : undefined,
-      source: formData.get("source") ? String(formData.get("source")) : null,
-      tags: tagsArray,
-      note: formData.get("note") ? String(formData.get("note")) : null,
-      offerId: formData.get("offerId") ? String(formData.get("offerId")) : null,
-    };
-  },
+  mapInput: (formData, ctx) => ({
+    orgId: ctx.orgId,
+    fullName: getString(formData, "fullName"),
+    email: getString(formData, "email"),
+    location: getStringOrNull(formData, "location"),
+    phone: getStringOrNull(formData, "phone"),
+    status: getTypedOrUndefined<CandidateStatus>(formData, "status"),
+    source: getStringOrNull(formData, "source"),
+    tags: getStringArray(formData, "tags"),
+    note: getStringOrNull(formData, "note"),
+    offerId: getStringOrNull(formData, "offerId"),
+  }),
   
   makeRepo: (sb) => makeCandidateRepo(sb),
   makeUsecase: (repo) => makeCreateCandidate(repo),
@@ -63,33 +59,19 @@ export const updateCandidateAction = createActionHandler<
 >({
   actionName: "updateCandidateAction",
   errorMessage: "Erreur lors de la mise à jour du candidat",
-  mapInput: (formData, ctx) => {
-    const tagsRaw = String(formData.get("tags") ?? "").trim();
-    const tagsArray =
-      tagsRaw.length > 0
-        ? tagsRaw
-            .split(",")
-            .map((t) => t.trim())
-            .filter(Boolean)
-        : [];
-
-    const statusRaw = formData.get("status");
-    const status = statusRaw ? (String(statusRaw) as CandidateStatus) : undefined;
-
-    return {
-      orgId: ctx.orgId,
-      candidateId: String(formData.get("id") ?? ""),
-      note: formData.get("note") ? String(formData.get("note")).trim() : null,
-      fullName: String(formData.get("fullName") ?? "").trim(),
-      email: String(formData.get("email") ?? "").trim(),
-      phone: formData.get("phone") ? String(formData.get("phone")).trim() : null,
-      location: formData.get("location") ? String(formData.get("location")).trim() : null,
-      status,
-      source: formData.get("source") ? String(formData.get("source")).trim() : null,
-      tags: tagsArray,
-      offerId: formData.get("offerId") ? String(formData.get("offerId")).trim() : null,
-    };
-  },
+  mapInput: (formData, ctx) => ({
+    orgId: ctx.orgId,
+    candidateId: getStringTrimmed(formData, "id"),
+    note: getStringOrNull(formData, "note"),
+    fullName: getStringTrimmed(formData, "fullName"),
+    email: getStringTrimmed(formData, "email"),
+    phone: getStringOrNull(formData, "phone"),
+    location: getStringOrNull(formData, "location"),
+    status: getTypedOrUndefined<CandidateStatus>(formData, "status"),
+    source: getStringOrNull(formData, "source"),
+    tags: getStringArray(formData, "tags"),
+    offerId: getStringOrNull(formData, "offerId"),
+  }),
   makeRepo: (sb) => makeCandidateRepo(sb),
   makeUsecase: (repo) => makeUpdateCandidate(repo),
   transformResult: (candidate) => ({
@@ -108,8 +90,8 @@ export const updateCandidateNoteAction = createActionHandler<
   
   mapInput: (formData, ctx) => ({
     orgId: ctx.orgId,
-    candidateId: String(formData.get("id") ?? ""),
-    note: String(formData.get("note") ?? "").trim() || null,
+    candidateId: getStringTrimmed(formData, "id"),
+    note: getStringOrNull(formData, "note"),
   }),
   makeRepo: (sb) => makeCandidateRepo(sb),
   makeUsecase: (repo) => makeUpdateCandidateNote(repo),
@@ -128,8 +110,8 @@ export const updateCandidateStatusAction = createActionHandler<
   errorMessage: "Erreur lors de la mise à jour du statut",
   mapInput: (formData, ctx) => ({
     orgId: ctx.orgId,
-    candidateId: String(formData.get("id") ?? ""),
-    status: String(formData.get("status") ?? "").trim() || null,
+    candidateId: getStringTrimmed(formData, "id"),
+    status: getStringOrNull(formData, "status"),
   }),
   makeRepo: (sb) => makeCandidateRepo(sb),
   makeUsecase: (repo) => {
@@ -167,7 +149,7 @@ export const deleteCandidateAction = createActionHandler<
   actionName: "deleteCandidateAction",
   errorMessage: "Erreur lors de la suppression du candidat",
   mapInput: (formData, ctx) => {
-    const candidateId = String(formData.get("candidateId") ?? "").trim();
+    const candidateId = getStringTrimmed(formData, "candidateId");
     const cvPathRaw = formData.get("cvPath");
     const cvPath =
       typeof cvPathRaw === "string" ? cvPathRaw.trim() : (cvPathRaw as string | null);
@@ -221,7 +203,7 @@ export const archiveCandidateAction = createActionHandler<
   errorMessage: "Erreur lors de l'archivage du candidat",
   mapInput: (formData, ctx) => ({
     orgId: ctx.orgId,
-    candidateId: String(formData.get("candidateId") ?? "").trim(),
+    candidateId: getStringTrimmed(formData, "candidateId"),
   }),
   makeRepo: (sb) => makeCandidateRepo(sb),
 

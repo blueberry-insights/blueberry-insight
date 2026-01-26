@@ -8,6 +8,12 @@ import { makeOfferRepo } from "@/infra/supabase/adapters/offer.repo.supabase";
 import type { TestFlowItem } from "@/core/models/TestFlow";
 import { isBlueberryAdmin } from "@/shared/utils/roles";
 import { STORAGE } from "@/config/constants";
+import {
+  getStringTrimmed,
+  getStringOrNull,
+  getStringOrUndefined,
+  getNumber,
+} from "@/shared/utils/formData";
 
 import { supabaseAdmin } from "@/infra/supabase/client";
 
@@ -20,7 +26,7 @@ export async function createFlowForOfferAction(
 ): Promise<Ok<{ id: string }> | Err> {
   return withAuth(async (ctx) => {
     try {
-      const offerId = String(formData.get("offerId") ?? "").trim();
+      const offerId = getStringTrimmed(formData, "offerId");
       if (!offerId) {
         return { ok: false, error: "offerId manquant" };
       }
@@ -56,17 +62,15 @@ export async function addFlowVideoItemAction(
 ): Promise<AddFlowItemOk | Err> {
   return withAuth(async (ctx) => {
     try {
-      const offerId = String(formData.get("offerId") ?? "").trim();
-      const flowId = String(formData.get("flowId") ?? "").trim();
-      const title = String(formData.get("title") ?? "").trim() || undefined;
-      const description =
-        String(formData.get("description") ?? "").trim() || undefined;
+      const offerId = getStringTrimmed(formData, "offerId");
+      const flowId = getStringTrimmed(formData, "flowId");
+      const title = getStringOrUndefined(formData, "title");
+      const description = getStringOrUndefined(formData, "description");
 
       // ✅ URL externe optionnelle (on peut créer le bloc puis uploader)
-      const videoUrlRaw = String(formData.get("videoUrl") ?? "").trim();
-      const videoUrl = videoUrlRaw ? videoUrlRaw : undefined;
+      const videoUrl = getStringOrUndefined(formData, "videoUrl");
 
-      const orderIndex = Number(formData.get("orderIndex") ?? 1);
+      const orderIndex = getNumber(formData, "orderIndex") || 1;
 
       if (!offerId || !flowId) {
         return {
@@ -101,13 +105,12 @@ export async function addFlowTestItemAction(
 ): Promise<AddFlowItemOk | Err> {
   return withAuth(async (ctx) => {
     try {
-      const offerId = String(formData.get("offerId") ?? "").trim();
-      const flowId = String(formData.get("flowId") ?? "").trim();
-      const testId = String(formData.get("testId") ?? "").trim();
-      const title = String(formData.get("title") ?? "").trim() || undefined;
-      const description =
-        String(formData.get("description") ?? "").trim() || undefined;
-      const orderIndex = Number(formData.get("orderIndex") ?? 1);
+      const offerId = getStringTrimmed(formData, "offerId");
+      const flowId = getStringTrimmed(formData, "flowId");
+      const testId = getStringTrimmed(formData, "testId");
+      const title = getStringOrUndefined(formData, "title");
+      const description = getStringOrUndefined(formData, "description");
+      const orderIndex = getNumber(formData, "orderIndex") || 1;
 
       if (!offerId || !flowId || !testId) {
         return {
@@ -167,11 +170,11 @@ export async function requestFlowVideoUploadAction(
         return { ok: false, error: "Unauthorized" };
       }
 
-      const offerId = String(formData.get("offerId") ?? "").trim();
-      const itemId = String(formData.get("itemId") ?? "").trim();
-      const fileName = String(formData.get("fileName") ?? "").trim();
-      const mimeType = String(formData.get("mimeType") ?? "").trim();
-      const sizeBytes = Number(formData.get("sizeBytes") ?? 0);
+      const offerId = getStringTrimmed(formData, "offerId");
+      const itemId = getStringTrimmed(formData, "itemId");
+      const fileName = getStringTrimmed(formData, "fileName");
+      const mimeType = getStringTrimmed(formData, "mimeType");
+      const sizeBytes = getNumber(formData, "sizeBytes");
 
       if (!offerId || !itemId) {
         return { ok: false, error: "Champs manquants (offerId, itemId)" };
@@ -257,12 +260,12 @@ export async function attachUploadedVideoToFlowItemAction(
         return { ok: false, error: "Unauthorized" };
       }
 
-      const offerId = String(formData.get("offerId") ?? "").trim();
-      const itemId = String(formData.get("itemId") ?? "").trim();
-      const storagePath = String(formData.get("storagePath") ?? "").trim();
-      const mimeType = String(formData.get("mimeType") ?? "").trim();
-      const sizeBytes = Number(formData.get("sizeBytes") ?? 0);
-      const title = String(formData.get("title") ?? "").trim() || null;
+      const offerId = getStringTrimmed(formData, "offerId");
+      const itemId = getStringTrimmed(formData, "itemId");
+      const storagePath = getStringTrimmed(formData, "storagePath");
+      const mimeType = getStringTrimmed(formData, "mimeType");
+      const sizeBytes = getNumber(formData, "sizeBytes");
+      const title = getStringOrNull(formData, "title");
 
       if (!offerId || !itemId) {
         return { ok: false, error: "Champs manquants (offerId, itemId)" };
@@ -343,8 +346,8 @@ export async function deleteFlowItemAction(
 ): Promise<DeleteOk | Err> {
   return withAuth(async (ctx) => {
     try {
-      const offerId = String(formData.get("offerId") ?? "").trim();
-      const itemId = String(formData.get("itemId") ?? "").trim();
+      const offerId = getStringTrimmed(formData, "offerId");
+      const itemId = getStringTrimmed(formData, "itemId");
 
       if (!offerId || !itemId) {
         return {
